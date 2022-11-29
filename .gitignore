@@ -1,0 +1,4 @@
+.DS_Store
+__pycache__/
+/static/online_output_latte/*_rn*/
+/static/DV_report_*.pdf
