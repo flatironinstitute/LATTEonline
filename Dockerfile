@@ -22,6 +22,7 @@ USER app
 WORKDIR /home/app
 COPY requirements.txt requirements.txt
 RUN pip3 install --user -r requirements.txt
-COPY . .
+COPY --chown=app . .
+RUN mkdir static/online_output_latte
 EXPOSE 5002
 CMD ["/home/app/.local/bin/bokeh", "serve", ".", "--address=0.0.0.0", "--port=5002"]
