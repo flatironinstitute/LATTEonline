@@ -1,0 +1,6 @@
+astroplan
+bokeh<3
+lightkurve
+tess_point
+reportlab
+reproject

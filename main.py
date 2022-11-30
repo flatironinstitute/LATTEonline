@@ -157,7 +157,8 @@ class Database:
 			print("Database connect failed with error", e)
 
 	def close_connection(self):
-		self.connection.close()
+		if self.connection:
+			self.connection.close()
 
 	# tid needs to be a int. Just cast it this way it takes care of leading 0's
 	def search(self, tic_id):

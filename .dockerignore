@@ -1,0 +1,6 @@
+Dockerfile
+.git
+.DS_Store
+__pycache__
+/static/online_output_latte
+/static/DV_report_*.pdf
