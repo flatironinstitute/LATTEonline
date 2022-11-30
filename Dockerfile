@@ -17,10 +17,10 @@ RUN apt-get update \
       python3-tornado \
       python3-tqdm \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
-RUN useradd -m app
+RUN useradd -u 2075 -m app
+USER app
 WORKDIR /home/app
 COPY requirements.txt requirements.txt
-USER app
 RUN pip3 install --user -r requirements.txt
 COPY . .
 EXPOSE 5002
