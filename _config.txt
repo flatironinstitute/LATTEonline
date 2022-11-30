@@ -5,5 +5,5 @@ codepath = /Users/neisner/Documents/code/LATTEonline/applatte/static/online_outp
 
 [workstation]
 datapath = /mnt/home/neisner/ceph/latte/output_LATTE
-outpath = /mnt/home/neisner/projects/LATTEonline/applatte/static/online_output_latte
-codepath = /mnt/home/neisner/projects/LATTEonline/applatte/static/online_output_latte
+outpath = static/online_output_latte
+codepath = static/online_output_latte
