@@ -683,12 +683,13 @@ def download_data(data_paths, binfac = 5):
         # open and view columns in lightcurve extension
         lcdata = lchdu[1].data
 
+        
         f02 = lcdata['PDCSAP_FLUX'] # Presearch Data Conditioning
         f02_err = lcdata['PDCSAP_FLUX_ERR']
         quality = lcdata['QUALITY']  # quality flags as determined by the SPOC pipeline
         time    = lcdata['TIME']
-        f0     = lcdata['SAP_FLUX']  #
-        fbkg     = lcdata['SAP_BKG']  # background flux
+        f0      = lcdata['SAP_FLUX']  #
+        fbkg    = lcdata['SAP_BKG']  # background flux
 
         med = np.nanmedian(f02)  # determine the median flux (ignore nan values)
         f1 = f02/med  # normalize by dividing byt the median flux
@@ -707,6 +708,7 @@ def download_data(data_paths, binfac = 5):
 
         sec     = int(lchdu[0].header['SECTOR'])  # the TESS observational sector
 
+        ticid = lchdu[0].header['TICID']
         tessmag = lchdu[0].header['TESSMAG']  # magnitude in the FITS header
         teff    = lchdu[0].header['TEFF']     # effective temperature in the FITS header (kelvin)
         srad    = lchdu[0].header['RADIUS']   # stellar radius in the FITS header (solar radii)
@@ -756,23 +758,38 @@ def download_data(data_paths, binfac = 5):
 
     # flatten lists of list
 
-    alltime =       list(np.hstack(alltime)      )
-    allflux =       list(np.hstack(allflux)      )
-    allflux_err =   list(np.hstack(allflux_err)  )
-    all_md =        list(np.hstack(all_md)       )
+    alltime =       np.hstack(alltime)      
+    allflux =       np.hstack(allflux)      
+    allflux_err =   np.hstack(allflux_err)  
+    all_md =        np.hstack(all_md)       
 
-    alltimebinned = list(np.hstack(alltimebinned))
-    allfluxbinned = list(np.hstack(allfluxbinned))
+    alltimebinned = np.hstack(alltimebinned)
+    allfluxbinned = np.hstack(allfluxbinned)
 
-    allx1 =         list(np.hstack(allx1)     )
-    allx2 =         list(np.hstack(allx2)     )
-    ally1 =         list(np.hstack(ally1)     )
-    ally2 =         list(np.hstack(ally2)     )
-    alltime12 =     list(np.hstack(alltime12) )
-    allfbkg =       list(np.hstack(allfbkg)   )
+    allx1 =         np.hstack(allx1)     
+    allx2 =         np.hstack(allx2)     
+    ally1 =         np.hstack(ally1)     
+    ally2 =         np.hstack(ally2)     
+    alltime12 =     np.hstack(alltime12) 
+    allfbkg =       np.hstack(allfbkg)   
 
+    try:
+        tessmag = float(tessmag)
+    except:
+        tessmag = float(0)
 
-    return alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, ra, dec
+    try:
+        teff = float(teff)
+    except:
+        teff = float(0)
+
+    try:
+        srad = float(srad)
+    except:
+        srad = float(0)
+
+    
+    return alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, ra, dec, ticid
 
 
 def download_data_FFI_interact(indir,sector, sectors_all, tic, save = False):
@@ -1439,8 +1456,12 @@ def download_data_neighbours(indir, db, sector, tics, distance, binfac = 5):
 
     # I'm sure that this will break once we have multiple sectors
 
+
     for tic in tics: 
-        insector , lc_paths0, _ = db.search(int(tic))
+        insector, lc_paths0, _ = db.search(int(tic))
+
+        file = db.search(int(tic))
+
 
         insector = np.array(insector)
         lc_paths0 = np.array(lc_paths0)
@@ -1452,13 +1473,13 @@ def download_data_neighbours(indir, db, sector, tics, distance, binfac = 5):
         #lc_paths = [indir + '/' + lc_path for lc_path in lc_paths0]
 
         dwload_link.append(indir + '/' + str(lc_paths[0]))
-    
+
     alltimebinned = []
     allfluxbinned = []
-    
+
     start_sec = []
     end_sec = []
-    
+
     alltime = []
     allflux = []
     all_md = []
@@ -2023,61 +2044,17 @@ def download_tpf(indir, outpath, random_number,transit_sec, transit_list, tic, l
 
     tp_paths = [lc.replace("_lc", "_tp") for lc in lc_paths]
 
-    #elif url_list != [-111]:
-    #    dwload_link_tp = []
-#
-    #    for url in url_list:
-    #        for sector in transit_sec:
-    #            if "{}/target".format(sector) in (url):
-    #                dwload_link_tp.append('https://mast.stsci.edu/api/v0.1/Download/file/?uri=' + url.replace('lc.fits', 'tp.fits'))
-#
-    ## if not a test find the link needed to access the data
-    #else:
-    #    dwload_link_tp = []
-#
-    #    sectorfile = "{}/data/sector_download_codes.txt".format(indir)
-    #    infile = pd.read_csv(sectorfile, delimiter = ' ', names = ['sec', 'first', 'second'], comment = '#')
-#
-    #    # search the LC download file for the URL to download the LC from MAST for the given target star.
-    #    # if we are looking at all of the sectors search, the file that has all of the LC URLs in it.
-#
-#
-    #    for sector in transit_sec:
-    #        sector = str(sector)
-    #        try:
-    #            this_sector_code = infile[infile.sec == int(sector)]
-#
-    #            sector = str(sector)
-#
-    #            download_url = (
-    #                "https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:TESS/product/tess"
-    #                + str(this_sector_code['first'].values[0]).rjust(13, "0")
-    #                + "-s"
-    #                + sector.rjust(4, "0")
-    #                + "-"
-    #                + str(tic).rjust(16, "0")
-    #                + "-"
-    #                + str(this_sector_code['second'].values[0]).rjust(4, "0")
-    #                + "-s_tp.fits")
-    #            dwload_link_tp.append(download_url)
-    #        except:
-    #            print ("file can't be download at this moment")
-#
-    ## download each file (i.e. each sector)
 
     for idx, file in enumerate(tp_paths):
         try:
-            #print ("trying to download")
-            #print (file)
-            #response = requests.get(file)
-            tpf = pf.open(file)   # open the file
+             tpf = pf.open(file)   # open the file
 
         except:
             print ("\n !!! This target pixel file is corrupt and cannot be downloaded at this time. Please try again later or a different file. \n")
             return [-111], [-111], [-111], [-111], [-111], [-111], [-111],[-111], [-111], [-111], [-111], [-111], [-111], [-111], [-111], [-111], [-111] # flag an error message
 
         #print ("download complete")
-        for T0 in transit_list:
+        for idxx,T0 in enumerate(transit_list):
 
             tpf_list.append(tpf)
 
@@ -2089,7 +2066,6 @@ def download_tpf(indir, outpath, random_number,transit_sec, transit_list, tic, l
 
             aperture = tpf[2].data
             apmask = aperture >= np.nanmax(aperture)
-
 
             # check whether any of the transits are in that sector - if not skip that sector.
             if (T0 > np.nanmin(t)) and (T0 < np.nanmax(t)):
@@ -2204,8 +2180,9 @@ def download_tpf(indir, outpath, random_number,transit_sec, transit_list, tic, l
 
                 tpf_filt = X4.reshape(tpf[1].data['FLUX'][lkeep,:,:].shape)
 
-                oot = (abs(T0-t) < 0.3) * (abs(T0-t) < 0.3)
-                intr = abs(T0-t) < 0.1
+                intr = abs(T0-t) < 0.2  # create a mask of the in transit times
+                oot = (abs(T0-t) < 0.9) * (abs(T0-t) > 0.7)  # create a mask of the out of transit times
+        
 
                 X1_list.append(X1) # not corrected
                 X4_list.append(X4) #  PCA corrected
@@ -2214,7 +2191,6 @@ def download_tpf(indir, outpath, random_number,transit_sec, transit_list, tic, l
                 t_list.append(t)
                 T0_list.append(T0)
                 tpf_filt_list.append(tpf_filt)
-
 
 
                 # ----------
@@ -2227,43 +2203,42 @@ def download_tpf(indir, outpath, random_number,transit_sec, transit_list, tic, l
                 label = ['small (~60 %)', 'pipeline (100 %)']
 
 
-        for i,arr in enumerate([smaller_mask,pipeline_mask]):
+                for i,arr in enumerate([smaller_mask,pipeline_mask]):
+        
+                    mask = np.zeros(shape=(arr.shape[0], arr.shape[1]))
+                    mask= arr
+        
+                    f = lambda x,y: mask[int(y),int(x)]
+                    g = np.vectorize(f)
+        
+                    x = np.linspace(0,mask.shape[1], mask.shape[1]*100)
+                    y = np.linspace(0,mask.shape[0], mask.shape[0]*100)
+                    X, Y= np.meshgrid(x[:-1],y[:-1])
+                    Z = g(X[:-1],Y[:-1])
+                    
+                     # get the pixels for the columns and rows
+                    start_column = tpf[1].header['1CRV5P']
+                    start_row = tpf[1].header['2CRV5P']
+                    
+                    # only show the start and end pixel
+                    y_label_list = ['{}'.format(start_row),'{}'.format(start_row + im.shape[0])] # make a pixel label for the x and y axis
+                    ax[i].set_yticks([0, y[:-1].max()-1])
+                    ax[i].set_yticklabels(y_label_list)
+                    
+                    x_label_list = ['{}'.format(start_column),'{}'.format(start_column + im.shape[1])]
+                    ax[i].set_xticks([0, x[:-1].max()-1])
+                    ax[i].set_xticklabels(x_label_list)
+                    
+                    ax[i].set_title('Aperture: {}'.format(label[i]), fontsize = 18)
+                    ax[i].imshow(im, cmap=plt.cm.viridis, **kwargs, origin = 'lower')
+                    ax[i].contour(Z, [0.5], colors=color[i], linewidths=[4],
+                                extent=[0-0.5, x[:-1].max()-0.5,0-0.5, y[:-1].max()-0.5])
+                    
+                    ax[i].set_xlabel("column (pixels)", labelpad=-9.5)
+                    ax[i].set_ylabel("row (pixels)", labelpad=-20)
 
-            mask = np.zeros(shape=(arr.shape[0], arr.shape[1]))
-            mask= arr
-
-            f = lambda x,y: mask[int(y),int(x)]
-            g = np.vectorize(f)
-
-            x = np.linspace(0,mask.shape[1], mask.shape[1]*100)
-            y = np.linspace(0,mask.shape[0], mask.shape[0]*100)
-            X, Y= np.meshgrid(x[:-1],y[:-1])
-            Z = g(X[:-1],Y[:-1])
-
-             # get the pixels for the columns and rows
-            start_column = tpf[1].header['1CRV5P']
-            start_row = tpf[1].header['2CRV5P']
-
-            # only show the start and end pixel
-            y_label_list = ['{}'.format(start_row),'{}'.format(start_row + im.shape[0])] # make a pixel label for the x and y axis
-            ax[i].set_yticks([0, y[:-1].max()-1])
-            ax[i].set_yticklabels(y_label_list)
-
-            x_label_list = ['{}'.format(start_column),'{}'.format(start_column + im.shape[1])]
-            ax[i].set_xticks([0, x[:-1].max()-1])
-            ax[i].set_xticklabels(x_label_list)
-
-            ax[i].set_title('Aperture: {}'.format(label[i]), fontsize = 18)
-            ax[i].imshow(im, cmap=plt.cm.viridis, **kwargs, origin = 'lower')
-            ax[i].contour(Z, [0.5], colors=color[i], linewidths=[4],
-                        extent=[0-0.5, x[:-1].max()-0.5,0-0.5, y[:-1].max()-0.5])
-
-            ax[i].set_xlabel("column (pixels)", labelpad=-9.5)
-            ax[i].set_ylabel("row (pixels)", labelpad=-20)
-
-        # save the figure (unless this is in TEST mode)
-        if test == 'no':
-            plt.savefig('{}/{}_rn{}/{}_apertures_{}.png'.format(outpath, tic, random_number, tic, idx), format='png', bbox_inches = 'tight')
+                    print ('{}/{}_rn{}/{}_apertures_{}.png'.format(outpath, tic, random_number, tic, idxx))
+                    plt.savefig('{}/{}_rn{}/{}_apertures_{}.png'.format(outpath, tic, random_number, tic, idxx), format='png', bbox_inches = 'tight')
 
         plt.clf()
         plt.close()
@@ -2380,102 +2355,103 @@ def download_tpf_lightkurve(indir, random_number, transit_list, sector, tic, tes
 
         # if the transit is within that sector then add it to the list to be used later
         for T0 in transit_list:
+
+            # if the T0 is 
             if (T0 > np.nanmin(tpf.time)) and (T0 < np.nanmax(tpf.time)):
                 tpf_list.append(tpf)
 
-        try:
-            # calculate the masks that we want to look at - three masks (small, pipeline mask and large)
-            # determine the size of the tess pipeline mask - this correlates with the magnitude of the target star
-            tess_ap_size = np.sum(tpf.pipeline_mask)
-
-            # aim to make the big aperture around 40 % smaller than the TESS pipeline aperture
-            small_ap_count = round(tess_ap_size * 0.60) # 60% of pipeline aperture
-
-            # we are using the lighkurve optimization to extract the aperture.
-            # this places an aperture on the central pixel and selects the brightest surrounding ones based on a threshhold value
-            # determine this threshhold value based on the number of pixels that we want using scipy minimizaton and the 'find aperure' function as defined below under 'other functions'
-            small_ap_thresh_val = minimize_scalar(find_aperture, bounds = [0,10], args = (small_ap_count, tpf)).x
-
-            # using the optimal threshhold values, determine the masks
-            smaller_mask = tpf.create_threshold_mask(threshold=small_ap_thresh_val, reference_pixel='center')
-
-            # TESS binned
-            TESS_unbinned = tpf.to_lightcurve(aperture_mask=tpf.pipeline_mask).flatten(window_length=100001)
-            TESS_unbinned = TESS_unbinned.remove_outliers(6)
-
-            # TESS binned
-            TESS_binned = tpf.to_lightcurve(aperture_mask=tpf.pipeline_mask).flatten(window_length=100001)
-            TESS_binned = TESS_binned.remove_outliers(6).bin(7)
-
-            # Use a custom aperture binned
-            small_binned = tpf.to_lightcurve(aperture_mask=smaller_mask).flatten(window_length=100001)
-            small_binned = small_binned.remove_outliers(6).bin(7)
-
-            TESS_unbinned_t = TESS_unbinned.time
-            TESS_binned_t = TESS_binned.time
-            small_binned_t = small_binned.time
-
-            # ----------
-            TESS_unbinned_t_l.append(TESS_unbinned_t)
-            TESS_binned_t_l.append(TESS_binned_t)
-            small_binned_t_l.append(small_binned_t)
-
-            TESS_unbinned_l.append(TESS_unbinned.flux)
-            TESS_binned_l.append(TESS_binned.flux)
-            small_binned_l.append(small_binned.flux)
-
-
-            # ----------
-            # plot the mean image and plot the extraction apertures on top of it so that one can verify that the used apertures make sense
-            im = np.nanmean(tpf.flux, axis = 0)
-            # set up the plot - these are stored and one of the images saved in the report
-            fig, ax = plt.subplots(1,2, figsize=(10,5), subplot_kw={'xticks': [], 'yticks': []})
-            kwargs = {'interpolation': 'none', 'vmin': im.min(), 'vmax': im.max()}
-            color = ['red', 'deepskyblue']
-            label = ['small (~60 %)', 'pipeline (100 %)']
+                # calculate the masks that we want to look at - three masks (small, pipeline mask and large)
+                # determine the size of the tess pipeline mask - this correlates with the magnitude of the target star
+                tess_ap_size = np.sum(tpf.pipeline_mask)
+    
+                # aim to make the big aperture around 40 % smaller than the TESS pipeline aperture
+                small_ap_count = round(tess_ap_size * 0.60) # 60% of pipeline aperture
+    
+                # we are using the lighkurve optimization to extract the aperture.
+                # this places an aperture on the central pixel and selects the brightest surrounding ones based on a threshhold value
+                # determine this threshhold value based on the number of pixels that we want using scipy minimizaton and the 'find aperure' function as defined below under 'other functions'
+                small_ap_thresh_val = minimize_scalar(find_aperture, bounds = [0,10], args = (small_ap_count, tpf)).x
+    
+                # using the optimal threshhold values, determine the masks
+                smaller_mask = tpf.create_threshold_mask(threshold=small_ap_thresh_val, reference_pixel='center')
+    
+                # TESS binned
+                TESS_unbinned = tpf.to_lightcurve(aperture_mask=tpf.pipeline_mask).flatten(window_length=100001)
+                TESS_unbinned = TESS_unbinned.remove_outliers(6)
+    
+                # TESS binned
+                TESS_binned = tpf.to_lightcurve(aperture_mask=tpf.pipeline_mask).flatten(window_length=100001)
+                TESS_binned = TESS_binned.remove_outliers(6).bin(7)
+    
+                # Use a custom aperture binned
+                small_binned = tpf.to_lightcurve(aperture_mask=smaller_mask).flatten(window_length=100001)
+                small_binned = small_binned.remove_outliers(6).bin(7)
+    
+                TESS_unbinned_t = TESS_unbinned.time
+                TESS_binned_t = TESS_binned.time
+                small_binned_t = small_binned.time
+    
+                # ----------
+                TESS_unbinned_t_l.append(TESS_unbinned_t)
+                TESS_binned_t_l.append(TESS_binned_t)
+                small_binned_t_l.append(small_binned_t)
+    
+                TESS_unbinned_l.append(TESS_unbinned.flux)
+                TESS_binned_l.append(TESS_binned.flux)
+                small_binned_l.append(small_binned.flux)
 
 
-            for i,arr in enumerate([smaller_mask,tpf.pipeline_mask]):
+                # ----------
+                # plot the mean image and plot the extraction apertures on top of it so that one can verify that the used apertures make sense
+                im = np.nanmean(tpf.flux, axis = 0)
+                # set up the plot - these are stored and one of the images saved in the report
+                fig, ax = plt.subplots(1,2, figsize=(10,5), subplot_kw={'xticks': [], 'yticks': []})
+                kwargs = {'interpolation': 'none', 'vmin': im.min(), 'vmax': im.max()}
+                color = ['red', 'deepskyblue']
+                label = ['small (~60 %)', 'pipeline (100 %)']
+    
+    
+                for i,arr in enumerate([smaller_mask,tpf.pipeline_mask]):
+    
+                    mask = np.zeros(shape=(arr.shape[0], arr.shape[1]))
+                    mask= arr
+    
+                    f = lambda x,y: mask[int(y),int(x)]
+                    g = np.vectorize(f)
+    
+                    x = np.linspace(0,mask.shape[1], mask.shape[1]*100)
+                    y = np.linspace(0,mask.shape[0], mask.shape[0]*100)
+                    X, Y= np.meshgrid(x[:-1],y[:-1])
+                    Z = g(X[:-1],Y[:-1])
+    
+                    # get the pixels for the columns and rows
+                    start_column = tpf[1].header['1CRV5P']
+                    start_row = tpf[1].header['2CRV5P']
+    
+                    # only show the start and end pixel
+                    y_label_list = ['{}'.format(start_row),'{}'.format(start_row + im.shape[0])] # make a pixel label for the x and y axis
+                    ax[i].set_yticks([0, y[:-1].max()-1])
+                    ax[i].set_yticklabels(y_label_list)
+    
+                    x_label_list = ['{}'.format(start_column),'{}'.format(start_column + im.shape[1])]
+                    ax[i].set_xticks([0, x[:-1].max()-1])
+                    ax[i].set_xticklabels(x_label_list)
+    
+                    ax[i].set_title('Aperture: {}'.format(label[i]), fontsize = 18)
+                    ax[i].imshow(im, cmap=plt.cm.viridis, **kwargs, origin = 'lower')
+                    ax[i].contour(Z, [0.5], colors=color[i], linewidths=[4],
+                                extent=[0-0.5, x[:-1].max()-0.5,0-0.5, y[:-1].max()-0.5])
+    
+                    ax[i].set_xlabel("column (pixels)", labelpad=-9.5)
+                    ax[i].set_ylabel("row (pixels)", labelpad=-20)
 
-                mask = np.zeros(shape=(arr.shape[0], arr.shape[1]))
-                mask= arr
+                    # save the figure
+                    plt.savefig('{}/{}_rn{}/{}_apertures_{}.png'.format(indir, tic, random_number,tic, idx), format='png', bbox_inches = 'tight')
+                    plt.clf()
+                    plt.close()
 
-                f = lambda x,y: mask[int(y),int(x)]
-                g = np.vectorize(f)
-
-                x = np.linspace(0,mask.shape[1], mask.shape[1]*100)
-                y = np.linspace(0,mask.shape[0], mask.shape[0]*100)
-                X, Y= np.meshgrid(x[:-1],y[:-1])
-                Z = g(X[:-1],Y[:-1])
-
-                # get the pixels for the columns and rows
-                start_column = tpf[1].header['1CRV5P']
-                start_row = tpf[1].header['2CRV5P']
-
-                # only show the start and end pixel
-                y_label_list = ['{}'.format(start_row),'{}'.format(start_row + im.shape[0])] # make a pixel label for the x and y axis
-                ax[i].set_yticks([0, y[:-1].max()-1])
-                ax[i].set_yticklabels(y_label_list)
-
-                x_label_list = ['{}'.format(start_column),'{}'.format(start_column + im.shape[1])]
-                ax[i].set_xticks([0, x[:-1].max()-1])
-                ax[i].set_xticklabels(x_label_list)
-
-                ax[i].set_title('Aperture: {}'.format(label[i]), fontsize = 18)
-                ax[i].imshow(im, cmap=plt.cm.viridis, **kwargs, origin = 'lower')
-                ax[i].contour(Z, [0.5], colors=color[i], linewidths=[4],
-                            extent=[0-0.5, x[:-1].max()-0.5,0-0.5, y[:-1].max()-0.5])
-
-                ax[i].set_xlabel("column (pixels)", labelpad=-9.5)
-                ax[i].set_ylabel("row (pixels)", labelpad=-20)
-
-            # save the figure
-            plt.savefig('{}/{}_rn{}/{}_apertures_{}.png'.format(indir, tic, random_number,tic, idx), format='png', bbox_inches = 'tight')
-            plt.clf()
-            plt.close()
-
-        except:
-            continue
+        #except:
+        #    continue
 
 
     TESS_unbinned_t_l = list(np.hstack(TESS_unbinned_t_l))
@@ -2629,8 +2605,9 @@ def download_tpf_mast(indir, random_number, transit_sec, transit_list, tic, test
                 tpf_filt = X4.reshape(tpf[1].data['FLUX'][lkeep,:,:].shape)
 
 
-                oot = (abs(T0-t) < 1.5) * (abs(T0-t) < 1.5)
-                intr = abs(T0-t) < 0.1
+                intr = abs(T0-t) < 0.2  # create a mask of the in transit times
+                oot = (abs(T0-t) < 0.9) * (abs(T0-t) > 0.7)  # create a mask of the out of transit times
+                
 
                 X1_list.append(X1) # not corrected
                 X4_list.append(X4) #  PCA corrected
@@ -4518,7 +4495,6 @@ def plot_in_out_TPF(tic,random_number, indir, X4_list, oot_list, t_list, intr_li
 
     '''
 
-
     plt.figure(figsize=(16,3.5*len(T0_list)))
 
     plt.tight_layout()
@@ -4533,13 +4509,14 @@ def plot_in_out_TPF(tic,random_number, indir, X4_list, oot_list, t_list, intr_li
         T0 = T0_list[idx] # the time of the transit-like event
         t = t_list[idx] # the time array
         tpf_filt  =  tpf_filt_list[idx]  # the filtered target pixel files
-
-        intr = abs(T0-t) < 0.25  # create a mask of the in transit times
-        oot = (abs(T0-t) < 0.5) * (abs(T0-t) < 0.3)  # create a mask of the out of transit times
+        
+        intr = abs(T0-t) < 0.2  # create a mask of the in transit times
+        oot = (abs(T0-t) < 0.9) * (abs(T0-t) > 0.7)  # create a mask of the out of transit times
+        
         img_intr = tpf_filt[intr,:,:].sum(axis=0)/float(intr.sum()) # apply the masks and normalize the flux
         img_oot = tpf_filt[oot,:,:].sum(axis=0)/float(oot.sum())
         img_diff = img_oot-img_intr # calculate the diffefence image (out of transit minus in-transit)
-
+        
         # ---- PLOT -------
 
         # in transit
@@ -4640,8 +4617,9 @@ def plot_in_out_TPF_proj(tic, random_number,indir, X4_list, oot_list, t_list, in
         # re-project the image with the new wcs
         array, footprint = reproject_interp(tup, wcs_out, shape_out = shape_out, order = 'nearest-neighbor')
 
-        intr = abs(T0-t) < 0.25 # create a mask of the in transit times
-        oot = (abs(T0-t) < 0.5) * (abs(T0-t) < 0.3) # the in-transit flux mask
+        intr = abs(T0-t) < 0.2  # create a mask of the in transit times
+        oot = (abs(T0-t) < 0.9) * (abs(T0-t) > 0.7)  # create a mask of the out of transit times
+        
         img_intr = tpf_filt[intr,:,:].sum(axis=0)/float(intr.sum())  # array of the time of the transit-like event
         img_oot = tpf_filt[oot,:,:].sum(axis=0)/float(oot.sum())     # array
         img_diff = img_oot-img_intr                                  # array of the diffefence image (out of transit minus in-transit)
