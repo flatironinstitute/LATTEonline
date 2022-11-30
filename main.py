@@ -83,11 +83,11 @@ else:
 	codepath = config['workstation']['codepath']
 
 	logo_text = """<div id="logo">
-				<img alt="LATTE Logo" title="Client Logo" src="/applatte/static/LATTE_imgs/LATTE_logo_small.png" style="width: 90%;max-height: 100%"/>
+				<img alt="LATTE Logo" title="Client Logo" src="/app/static/LATTE_imgs/LATTE_logo_small.png" style="width: 90%;max-height: 100%"/>
 				</div>
 	"""
 	PHT_logo_text = """<div id="PHT logo">
-				<img alt="PHT logo" title="PHT Logo" src="/applatte/static/LATTE_imgs/pht_logo_small.png" style="width: 83%;max-height: 83%"/>
+				<img alt="PHT logo" title="PHT Logo" src="/app/static/LATTE_imgs/pht_logo_small.png" style="width: 83%;max-height: 83%"/>
 				</div>
 	"""
 
@@ -1129,7 +1129,7 @@ filename = filename.concat(p.title.text.split(' ')[1])
 filename = filename.concat('.pdf')
 alert(filename);
 
-var path = '/applatte/static/online_output_latte/'
+var path = '/app/static/online_output_latte/'
 path = [path + p.title.text.split(' ')[1] + '_rn' + rn_text.text + '/DV_report_' + p.title.text.split(' ')[1] + '.pdf'].join()
 
 fetch(path, {cache: "no-store"}).then(response => response.blob())
@@ -1678,7 +1678,7 @@ var filename = p.title.text;
 filename = 'test.pdf';
 alert(filename);
 
-fetch('/applatte/static/DV_report_470710327.pdf', {cache: "no-store"}).then(response => response.blob())
+fetch('/app/static/DV_report_470710327.pdf', {cache: "no-store"}).then(response => response.blob())
 					.then(blob => {
 						//addresses IE
 						if (navigator.msSaveBlob) {
