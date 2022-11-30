@@ -2,3 +2,5 @@
 __pycache__/
 /static/online_output_latte/*_rn*/
 /static/DV_report_*.pdf
+/latte_html.txt
+/latte_html_script.txt
