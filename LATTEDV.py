@@ -56,10 +56,10 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
     LATTE Data Validation report in PDF format.
 
 	'''
-
+	
 	# ---- CHECK WHETHER THE TARGET IS A TCE OR A TOI ----
 	print ("\n Start compiling the data validation report...")
-
+	
 	# TCE -----
 	lc_dv = np.genfromtxt('{}/data/tesscurl_sector_all_dv.sh'.format(indir), dtype = str)
 
