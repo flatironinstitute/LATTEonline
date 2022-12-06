@@ -2720,7 +2720,7 @@ def plot_centroid(tic, random_number, indir, alltime12, allx1, ally1, allx2, all
     -------
         Plot of the centroid positions in the x and y direction.
         The black points are the centroid position - moves if this is a blend.
-
+    
     '''
 
 
