@@ -58,7 +58,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 	'''
 	
 	# ---- CHECK WHETHER THE TARGET IS A TCE OR A TOI ----
-	print ("\n Start compiling the data validation report...")
+	#print ("\n Start compiling the data validation report...")
 	
 	# TCE -----
 	lc_dv = np.genfromtxt('{}/data/tesscurl_sector_all_dv.sh'.format(indir), dtype = str)
@@ -185,17 +185,17 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 	table_count = 0
 
 	# title
-	title = "PHT Data Validation Report"
-	subheading = "TIC {}".format(tic)
+	title = "LATTE report for TIC {}".format(tic)
+	#subheading = "TIC {}".format(tic)
 
 	styles=getSampleStyleSheet()
 	styles.add(ParagraphStyle(name='centre', alignment=TA_CENTER))
-	ptext = '<font size=12><b>%s</b></font>' % title
-	subtext = '<font size=12><b>%s</b></font>' % subheading
+	ptext = '<font size=13><b>%s</b></font>' % title
+	#subtext = '<font size=12><b>%s</b></font>' % subheading
 
 	Story.append(Paragraph(ptext, styles["centre"]))
-	Story.append(Paragraph(subtext, styles["centre"]))
-	Story.append(Spacer(1, 25))
+	#Story.append(Paragraph(subtext, styles["centre"]))
+	Story.append(Spacer(1, 30))
 
 	# ----- ADD THE LOGOS -------
 	PHT_logo =   Image(PHT_logo_name)
@@ -227,7 +227,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 	Story.append(Spacer(1, 2))
 	line = MCLine_color(width*0.77)
 	Story.append(line)
-	Story.append(Spacer(1, 20))
+	Story.append(Spacer(1, 15))
 
 	if len(transit_list) == 0: # if in asteroseismic mode
 		# --------------------------------------------
@@ -240,8 +240,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 		fig_count += 1
 
 		full_image_text = "Fig {}. Full lightcurve for target TIC {}. The solid blue lines at the bottom of the figure indicated the \
-		times of the reaction wheel momentum dumps, which  \
-		occur around every 2 to 2.5 days and typically last around half an hour.".format(fig_count,tic)
+		times of the reaction wheel momentum dumps.".format(fig_count,tic)
 
 		ptext = '<font size=8>%s</font>' % full_image_text
 		Story.append(Paragraph(ptext, styles["Normal"]))
@@ -257,9 +256,10 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 		fig_count += 1
 
-		full_image_text = "Fig {}. Full lightcurve for target TIC {}. The solid blue lines at the bottom of the figure indicated the \
-		times of the reaction wheel momentum dumps and the dashed black line(s) show the time(s) of the marked transit event(s). Momentum dumps \
-		occur around every 2 to 2.5 days and typically last around half an hour.".format(fig_count,tic)
+		full_image_text = "Fig {}. Full lightcurve for target TIC {} showing the unbinned (orange) and binned (black) data. The solid blue lines at the bottom of the figure indicated the \
+		times of the reaction wheel momentum dumps and the dashed black line(s) show the time(s) of the marked transit event(s)".format(fig_count,tic)
+
+		Story.append(Spacer(1, 10))
 
 		ptext = '<font size=8>%s</font>' % full_image_text
 		Story.append(Paragraph(ptext, styles["Normal"]))
@@ -305,12 +305,12 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 					   ['TIC ID',	 tic, ],
 					   ['Other name',	 c_id, ],
 					   ['RA/Dec',		"{}  {}".format(round(ra,5), round(dec,5)), "degrees"],
-					   ['Radius',	 "{}".format(srad), "Solar Radii"],
-					   ['Mass',	     "{}".format(mstar), "Solar Mass"],
-					   ['Teff',	     "{}".format(teff), "Kelvin"],
+					   ['Radius',	 "{}".format(srad), "solar radii"],
+					   ['Mass',	     "{}".format(mstar), "solar mass"],
+					   ['Teff',	     "{}".format(teff), "kelvin"],
 					   ['Parallax',	     "{}".format(plx), " "],
-					   ['T mag',     "{}".format(tessmag), "Mag"],
-					   ['V mag',     "{}".format(vmag), "Mag"],
+					   ['T mag',     "{}".format(tessmag), "mag"],
+					   ['V mag',     "{}".format(vmag), "mag"],
 					   ['Sectors (nominal)',	  "{} *".format(str(nominal_mission_sectors)[1:-1]),],
 					   ['Sectors (extended)',	  "{} *".format(str(extended_mission_sectors)[1:-1]),],
 					   ['Sectors (further extended)',	  "{} *".format(str(further_extended_mission_sectors)[1:-1]),],
@@ -372,7 +372,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 	# ------ ADD A LINE TO SEPERATE SECTIONS -----
 
-	Story.append(Spacer(1, 20))
+	Story.append(Spacer(1, 10))
 	line = MCLine(width*0.77)
 	Story.append(line)
 
@@ -419,7 +419,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 		im2 = Image(background_flux_name)
 
 		if len(transit_list) == 1:
-			im2._restrictSize(width*0.55, width*0.55)
+			im2._restrictSize(width*0.60, width*0.60)
 
 		else:
 			im2._restrictSize(width*0.8, width*0.8)
@@ -446,9 +446,9 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 			im3 = Image(centroid_positions_name)
 
 			if len(transit_list) == 1:
-				im3._restrictSize(width*0.52, width*0.52)
+				im3._restrictSize(width*0.60, width*0.60)
 			else:
-				im3._restrictSize(width*0.7, width*0.7)
+				im3._restrictSize(width*0.8, width*0.8)
 
 			Story.append(im3)
 
@@ -459,7 +459,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 			ptext = '<font size=8>%s</font>' % centroid_text
 
-			Story.append(Spacer(1, 5))
+			Story.append(Spacer(1, 1))
 
 			Story.append(Paragraph(ptext, styles["Normal"]))
 
@@ -480,16 +480,16 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 			im4 = Image(flux_aperture_name)
 
 			if len(transit_list) == 1:
-				im4._restrictSize(width*0.55, width*0.55)
+				im4._restrictSize(width*0.60, width*0.60)
 			else:
-				im4._restrictSize(width*0.7, width*0.7)
+				im4._restrictSize(width*0.8, width*0.8)
 
 			Story.append(im4)
 
 			fig_count += 1
-			Story.append(Spacer(1, 16))
+			Story.append(Spacer(1, 10))
 			flux_aperture_text = "Fig {}. The lightcurve around the time of each transit-like event extracted with the SPOC pipeline \
-				defined aperture (binned:blue, unbinned:grey) and the with an aperture that is 40 per cent smaller (red). The flux is extracted \
+				defined aperture (binned:blue, unbinned:grey) and the with a different sized apertire (red). The flux is extracted \
 				from the target pixel files (TPFs) and has not been detrended or \
 				corrected for systematics. The vertical orange line indicates the time of the transit-like event.".format(fig_count)
 
@@ -504,13 +504,13 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 				im45 = Image(apertures_name)
 
-				im45._restrictSize(width*0.4, width*0.4)
+				im45._restrictSize(width*0.45, width*0.45)
 
 				Story.append(im45)
 
 				fig_count += 1
 
-				Story.append(Spacer(1, 16))
+				Story.append(Spacer(1, 1))
 
 				if FFI == False:
 					aperture_text = "Fig {}. The apertures used to extract the lightcurves. The blue aperture on the right shows the \
@@ -520,6 +520,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 				else:
 					aperture_text = "Fig {}. The larger (right hand side, blue) and the smaller (left hamd side, red) apertures used to extract the lightcurves shown in Figure {}.".format(fig_count, (fig_count-1))
 
+				Story.append(Spacer(1, 15))
 				ptext = '<font size=8>%s</font>' % aperture_text
 				Story.append(Paragraph(ptext, styles["Normal"]))
 
@@ -537,7 +538,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 			Story.append(im5)
 
 			fig_count += 1
-			Story.append(Spacer(1, 16))
+			Story.append(Spacer(1, 15))
 			flux_aperture_text = "Fig {}. Difference images for target TIC {} for each transit like event. \
 			Left: mean in-transit flux(left). Middle: mean out-of-transit flux. Right: difference between the mean out-of-transit and mean in-transit flux. \
 			Ensure that the change in brightness occurs on target.".format(fig_count, tic)
@@ -570,6 +571,8 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 				tess_stars_text = "Fig {}. The locations of nearby GAIA DR2 stars with a magnitude difference less than 5 (orange circle) within the Tess \
 				Cut Out around TIC {} (red star). Only shown for one sector. Right: SDSS image of the surrounding field.".format(fig_count, tic)
 
+				Story.append(Spacer(1, 15))
+
 				ptext = '<font size=8>%s</font>' % tess_stars_text
 				Story.append(Paragraph(ptext, styles["Normal"]))
 
@@ -587,8 +590,9 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 			Story.append(im7)
 			fig_count += 1
 			Story.append(Spacer(1, 10))
-			nn_text = "Fig {}. Lightcurves of the five closest stars to target {} (top pannel). \
-				The distances to the target star and the TESS magnitudes are shown for each star. Only ever shown for one sector.".format(fig_count,tic)
+			nn_text = "Fig {}. Lightcurves of the five closest stars to target {} (top pannel) that were also observed \
+				by TESS at the 2 minute cadence. \
+				The distances to the target star and the TESS magnitudes are listed for each star. Shown for one sector only.".format(fig_count,tic)
 
 			ptext = '<font size=8>%s</font>' % nn_text
 			Story.append(Paragraph(ptext, styles["Normal"]))
@@ -622,15 +626,18 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 				if i == 0:
 					fig_count += 1
 
-					pixLC_text = "Fig {}. Normalised flux extracted for each pixel, using the SPOC pipeline mask, around the time of the transit-like event. \
-					The orange/red data points show the in-transit data. The solid red lines show the SPOC pipeline mask. Only shown for one sector.".format(fig_count)
+					pixLC_text = "Fig {}. Normalised flux extracted for each pixel (using the SPOC pipeline mask) around the time of the transit-like event. \
+					The orange data points show the in-transit data. The solid red lines show the SPOC pipeline mask. Shown for one sector only.".format(fig_count)
 					
+					Story.append(Spacer(1, 10))
+
 					ptext = '<font size=8>%s</font>' % pixLC_text
 					Story.append(Paragraph(ptext, styles["Normal"]))
 
 				else:
 					pixLC_text = "Fig {}. -- continued".format(fig_count)
 					
+					Story.append(Spacer(1, 10))
 					ptext = '<font size=8>%s</font>' % pixLC_text
 					Story.append(Paragraph(ptext, styles["Normal"]))
 
@@ -821,13 +828,13 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 	imp = Image(periodogram_name)
 
-	imp._restrictSize(width*0.55, width*0.55)
+	imp._restrictSize(width*0.63, width*0.63)
 
 	Story.append(imp)
 
 	fig_count += 1
-	Story.append(Spacer(1, 10))
-	periodogram_text = "Fig {}. Lomb scargle power spectrum of the TESS lightcurve (black line) and a boxcar-smoothed periogram (pink line) computed with a window length of 20 micro Hz.".format(fig_count)
+	#Story.append(Spacer(1, 10))
+	periodogram_text = "Fig {}. Lomb-Scargle power spectrum of the TESS lightcurve (black line) and a boxcar-smoothed periogram (pink line) computed with a window length of 20 micro Hz.".format(fig_count)
 
 	ptext = '<font size=8>%s</font>' % periodogram_text
 	Story.append(Paragraph(ptext, styles["Normal"]))
@@ -862,7 +869,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 		imastcorr = Image(periodogram_correlation_name)
 
-		imastcorr._restrictSize(width*0.55, width*0.55)
+		imastcorr._restrictSize(width*0.60, width*0.60)
 
 		Story.append(imastcorr)
 
@@ -881,12 +888,12 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 		imechcorr = Image(periodogram_echelle_name)
 
-		imechcorr._restrictSize(width*0.55, width*0.55)
+		imechcorr._restrictSize(width*0.63, width*0.63)
 
 		Story.append(imechcorr)
 
 		fig_count += 1
-		Story.append(Spacer(1, 10))
+		Story.append(Spacer(1, 5))
 		echellecorr_text = "Fig {}. Echelle diragram.".format(fig_count)
 
 		echelletext = '<font size=8>%s</font>' % echellecorr_text
@@ -901,12 +908,12 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 	imp = Image(eep_name)
 
-	imp._restrictSize(width*0.55, width*0.55)
+	imp._restrictSize(width*0.63, width*0.63)
 
 	Story.append(imp)
 
 	fig_count += 1
-	Story.append(Spacer(1, 10))
+	Story.append(Spacer(1, 0))
 	periodogram_text = "Fig {}. The equivalent evolutionary phase (eep) tracks for main sequence evolution (solid lines) and post \
 	main-sequence evolution (dashed lines) for masses ranging from 0.3 to 1.6 solar masses (from right to left). \
 	The 1 Solar Mass track is shown in maroon. The blue points show the TOIs and the magenta point TIC {}.".format(fig_count, tic)
