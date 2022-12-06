@@ -52,6 +52,7 @@ global syspath
 
 # scp -r /Users/neisner/Documents/code/LATTEonline ccalin029:/mnt/home/neisner/projects/
 # scp -r /mnt/home/neisner/projects/LATTEonline popeye:/mnt/home/neisner/projects/
+
 # scp -r /Users/neisner/Documents/code/LATTEonline popeye:/mnt/home/neisner/projects/
 
 # open the confidguration file so that this can be used on different machines as long as there is a cofnigureation file pointing to the LATTE output folder
@@ -220,7 +221,7 @@ class Database:
 
 		SUBFOLDER_SPLIT = 1e7
 
-		print("start db search")
+		#print("start db search")
 		sql_select_by_tic = """ SELECT sector_id, tp_filename FROM fits
 												WHERE tic_id = ? """
 
@@ -249,7 +250,7 @@ class Database:
 		except Error as e:
 			print("INSERT failed with error", e)
 
-		print("end db search")
+		#print("end db search")
 		return (sector, lc_filename_list, tp_filename_list)
 
 
@@ -300,14 +301,14 @@ target_name_input = TextInput(title='Enter Simbad or TIC ID of a star:', width=w
 
 # help button to primpt the user to add a TIC ID
 tic_prompt_button = Button(label="?", width = 5)
-tic_prompt_text = CustomJS(args={}, code='alert("(1) Enter a TIC ID or any ID recognised by SIMBAD. If the target was observed by TESS the data will be shown. (If you\'re feelig lucky, click the orange button below to select a random target!) (2) Double click on the figure to select a transit time. (3) Press the Add time button to add the time to the list of transit times to analyse. (4) Press the Make report button to generate a pdf summary.");')
+tic_prompt_text = CustomJS(args={}, code='alert("(1) Enter a TIC ID or any ID recognised by SIMBAD. If the target was observed by TESS the data will be shown. (If you\'re feelig lucky, click the orange button below to select a random target!) (2) Double click on the figure to select an event time. (3) Press the Add time button to add the time to the list of event times to analyse. (4) Press the Make report button to generate a pdf summary.");')
 tic_prompt_button.js_on_click(tic_prompt_text)
 
 # button to enter
-button_done = Button(label = "Make Report", button_type = 'success', width=width_gadgets - 42)
+button_done = Button(label = "Make Report", button_type = 'primary', width=width_gadgets - 42)
 
 report_prompt_button = Button(label="?", width = 5)
-report_prompt_text = CustomJS(args={}, code='alert("Select transit times by clicking on the Add time button. Added times appear to the right of the light curve plots. Once at least one transit time has beeen added a pdf report can be generated. Reports are automatically downloaded.");')
+report_prompt_text = CustomJS(args={}, code='alert("Select transit times by clicking on the Add time button. Added times appear to the right of the light curve plots. Once at least one event time has beeen added a pdf report can be generated. Reports are automatically downloaded.");')
 report_prompt_button.js_on_click(report_prompt_text)
 
 # button to change the bin factor
@@ -318,7 +319,7 @@ bin_factor = Select(title="Bin factor", value="10",
 select_sector = Select(title="Select sector", value="all", options=["all"], width=width_gadgets)
 
 # the text to add/remove transit events
-tr_text_name = Div(text="""<b>Transit list<b> \n""", width=100, height=100, style={'font-size': '120%', 'color': 'black'})
+tr_text_name = Div(text="""<b>Event times<b> \n""", width=120, height=100, style={'font-size': '120%', 'color': 'black'})
 tr_text = Div(text=""" """, width=100, height=100, style={'font-size': '120%', 'color': 'black'})
 rn_text = Div(text=""" - """, width=1, height=1, style={'font-size': '0%', 'color': '0'}) # this is dummy text for the naming of the planets
 
@@ -328,11 +329,57 @@ width1 = 150
 width2 = 300
 
 color1 = 'dimgray'
-color2 = 'darkslategrey'
+color2 = '#293040'
 fontsize = '110%'
 text_height = 15
 
-target_targetinfo_name = Div(text= """<b>Target Information <b> <br> <br>TIC ID <br> RA <br> Dec <br> TESS mag <br> Teff <br> Stellar Radius <br> ExoFOP <br> SIMBAD""", width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
+
+target_targetinfo_name_text  = " <!DOCTYPE html> \
+<html> \
+<style> \
+.tooltip { \
+  position: relative; \
+  display: inline-block; \
+  border-bottom: 1px dotted black; \
+} \
+ \
+.tooltip .tooltiptext { \
+  visibility: hidden; \
+  width: 300px; \
+  background-color: #293040; \
+  color: #fff; \
+  text-align: center; \
+  border-radius: 6px; \
+  font-size: 14px; /* Set a font-size */ \
+  padding: 5px 0; \
+   \
+  /* Position the tooltip */ \
+  position: absolute; \
+  z-index: 1; \
+  top: 100%; \
+  left: 50%; \
+  margin-left: -60px; \
+} \
+ \
+.tooltip:hover .tooltiptext { \
+  visibility: visible; \
+} \
+</style> \
+<body style='text-align:center;'>  "
+ 
+text_end = " <b> Target Information <b> <b> <br> \
+<div class='tooltip'> <br> <b> TIC ID <b> <br> \
+  <span class='tooltiptext'>{}</span> \
+</div> \
+<br> <b> RA <br> Dec <br> TESS mag <br> Teff <br> Stellar Radius <br> <br> ExoFOP <br> SIMBAD <b>\
+ \
+</body> \
+</html> \
+".format("other names")
+
+#target_targetinfo_name = Div(text= """<b>Target Information <b> <br> <br>TIC ID <br> RA <br> Dec <br> TESS mag <br> Teff <br> Stellar Radius <br> <br> ExoFOP <br> SIMBAD""", width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
+target_targetinfo_name = Div(text= target_targetinfo_name_text + text_end, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
+
 target_targetinfo_data = Div(text= """ """, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
 
 #target_tic_name = Div(text=""" TIC ID """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
@@ -383,7 +430,7 @@ back_button = Button(label = "Back", width=120)
 #quick_zoom_toggle = Toggle(label = "zoom", button_type = 'warning', width=100)
 
 joss_url = 'https://joss.theoj.org/papers/10.21105/joss.02101'
-reference_text = "Copyright: Nora Eisner. If you use this tool for work that is being published please cite <a href='%s'target='_blank'>Eisner et al. 2020.</a>." % joss_url
+reference_text = "Copyright: Nora Eisner. If you use this tool for work that is being published please cite <a href='%s'target='_blank'>Eisner et al. 2020</a>." % joss_url
 joss_text = Div(text=reference_text, style={'font-size': '75%', 'color': 'grey'})
 
 # ------------------------------------------------------------------------------------
@@ -407,7 +454,7 @@ p = figure(height=350,
 	)
 
 
-main_points = p.square(x="x", 
+main_points = p.circle(x="x", 
 	y="y", 
 	source=source, 
 	size=3, 
@@ -417,7 +464,7 @@ main_points = p.square(x="x",
 	)
 
 
-binned_points = p.square(x="x_binned", 
+binned_points = p.circle(x="x_binned", 
 	y="y_binned", 
 	source=source_binned, 
 	size=3, 
@@ -433,7 +480,6 @@ main_segment = p.segment(x0 = "md_x1",
 	source = source_md,
 	color="blue", 
 	line_width=1)
-
 
 
 p.xaxis.axis_label = r"$$\text{Time (BJD - 2457000)}$$"
@@ -458,7 +504,6 @@ welcome_text = p.text(
 		text_align="center",
 		text_font_size="20px",
 		#text_font="helvetica",
-		text_font_style="normal",
 		source= welcome_text_source)
 
 # - - - - -	ZOOM TAB - - - - - - 
@@ -477,7 +522,7 @@ plot_zoom = figure(
 	tools='box_zoom,wheel_zoom,pan,reset'
 )
 
-zoom_points	= plot_zoom.square(x="x_zoom", 
+zoom_points	= plot_zoom.circle(x="x_zoom", 
 	y="y_zoom", 
 	source=source_zoom, 
 	size=5, 
@@ -486,7 +531,7 @@ zoom_points	= plot_zoom.square(x="x_zoom",
 	alpha=0.8,
 	)
 
-zoom_points_binned = plot_zoom.square(x="x_zoom_binned", 
+zoom_points_binned = plot_zoom.circle(x="x_zoom_binned", 
 	y="y_zoom_binned", 
 	source=source_zoom_binned, 
 	size=5, 
@@ -523,7 +568,7 @@ plot_bkg = figure(
 )
 
 
-bkg_points = plot_bkg.square(
+bkg_points = plot_bkg.circle(
 	x="x_bkg",
 	y="y_bkg",
 	source=source_bkg,
@@ -569,7 +614,7 @@ plot_ycen = figure(
 )
 
 
-xcen1_points = plot_xcen.square(
+xcen1_points = plot_xcen.circle(
 	x="x_xcen1",
 	y="y_xcen1",
 	source=source_xcen1,
@@ -579,7 +624,7 @@ xcen1_points = plot_xcen.square(
 	size=5,
 )
 
-xcen2_points = plot_xcen.square(
+xcen2_points = plot_xcen.circle(
 	x="x_xcen2",
 	y="y_xcen2",
 	source=source_xcen2,
@@ -590,7 +635,7 @@ xcen2_points = plot_xcen.square(
 )
 
 
-ycen1_points = plot_ycen.square(
+ycen1_points = plot_ycen.circle(
 	x="x_ycen1",
 	y="y_ycen1",
 	source=source_ycen1,
@@ -600,7 +645,7 @@ ycen1_points = plot_ycen.square(
 	size=5,
 )
 
-ycen2_points = plot_ycen.square(
+ycen2_points = plot_ycen.circle(
 	x="x_ycen2",
 	y="y_ycen2",
 	source=source_ycen2,
@@ -651,7 +696,7 @@ pg_points = plot_periodgrm.line(
 )
 
 
-dummy_points = plot_periodgrm.square(x="x_dummy", 
+dummy_points = plot_periodgrm.circle(x="x_dummy", 
 	y="y_dummy", 
 	source=source_dummy, 
 	size=30, 
@@ -769,7 +814,7 @@ for i in range(300,1700, 100): # we have evolutionary tracks from 0.3 M_sun to 1
 	)
 
 
-evol_points = plot_evol.square(x="x_evol_points", 
+evol_points = plot_evol.circle(x="x_evol_points", 
 	y="y_evol_points", 
 	source=source_evol_points, 
 	size=2, 
@@ -825,7 +870,7 @@ plot_phase = figure(
 	tools='box_zoom,wheel_zoom,pan,reset'
 )
 
-phase_points = plot_phase.square(x="x_phase", 
+phase_points = plot_phase.circle(x="x_phase", 
 	y="y_phase", 
 	source=source_phased, 
 	size=5, 
@@ -868,6 +913,10 @@ color_theme_menu = Select(title="Color theme", value="light",
 				 options=['light', 'dark'], width=width_gadgets)
 
 
+plotting_options_menu = Select(title="Report plot options", value="split by hemispheres",
+				 options=["split axes by hemispheres", "split axes by sectors", "don't split axes", "plot sectors with events"], width=width_gadgets)
+
+
 def color_theme():
 
 	if color_theme_menu.value == 'light':
@@ -905,7 +954,7 @@ def color_theme():
 	elif color_theme_menu.value == 'dark':
 
 		for plot in [p, plot_zoom, plot_bkg, plot_xcen, plot_ycen, plot_periodgrm, plot_evol, plot_phase]:
-			plot.background_fill_color = 'darkslategray'
+			plot.background_fill_color = '#293040'
 			plot.outline_line_color = 'white'
 			plot.ygrid.grid_line_color = 'dimgray'
 			plot.xgrid.grid_line_color = 'dimgray'
@@ -952,6 +1001,9 @@ def select_data(lucky = False):
 	Function to load the data needed to plot the initial LCs displayed in the interface.
 	'''
 
+	# take note that the data is being dowloaded 
+	div_spinner_loading_data.visible = True
+
 	global transit_time_list
 
 	# delete the markings
@@ -960,6 +1012,7 @@ def select_data(lucky = False):
 
 	# -----------------
 	
+
 	# grey out the DV report button if no	(i.e. )
 	if len(transit_time_list) > 0:
 		button_done.disabled=False
@@ -978,6 +1031,19 @@ def select_data(lucky = False):
 			
 			_ , lc_paths0, tp_paths0 = db.search(int(TICID))
 			
+			df_other_names = (pd.DataFrame(np.array(catalog_data)))
+			
+			other_names_ref = ['HIP','TYC','UCAC','TWOMASS','SDSS','ALLWISE','GAIA','APASS','KIC']
+			
+			names_str = ''
+			
+			for name in other_names_ref:
+			    
+			    if len(df_other_names[name][0]) > 0:
+			        names_str = names_str +  (str(name) + ' ' + str(df_other_names[name][0]) + "<br>")
+			    else:
+			        names_str = names_str + (str(name) + ' ' + "--- <br>")
+
 
 		except:
 			#if it fails then the target can't be resolved 
@@ -985,18 +1051,22 @@ def select_data(lucky = False):
 				TICID = int(target_name)
 				TIC = "TIC " + str(TICID) # numerical only
 				_ , lc_paths0, tp_paths0 = db.search(int(TICID))
+
+				names_str = 'unavailable'
+
 			except:
 				#p.title.text_color="red"
 				#p.title.text = "THIS TARGET HASN'T BEEN OSBERVED BY TESS"
 				all_data = [-99]
 				div_error.visible=True
-	
+				div_spinner_loading_data.visible = False
 				return all_data
 
 	else:
 		_ , lc_paths0, tp_paths0 = db.search_random()
+		names_str = 'unavailable'
 
-	div_error.visible=False
+	div_error.visible = False
 
 	lc_paths0 = lc_paths0
 	tp_paths0 = tp_paths0
@@ -1044,11 +1114,11 @@ def select_data(lucky = False):
 
 		lc_paths = [datapath + '/' + lcp for lcp in lc_paths0]
 		
-		print("download data")
+		#print("download data")
 		# extract the data from the fits files
 		alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, ra, dec, TICID = LATTEutils.download_data(lc_paths)
 
-		print("end download data")
+		#print("end download data")
 		# change things into arrays because they're better
 		
 		#allx1 = np.array(allx1)
@@ -1242,8 +1312,8 @@ def select_data(lucky = False):
 		target_tic_text = r"$$%s$$" %(TICID)
 		target_ra_text= r"$${}~^\circ$$".format(round(ra,5))
 		target_dec_text = r"$${}~^\circ$$".format(round(dec,5))
-		target_mag_text = r"$$%.2f	$$"%(tessmag)
-		target_teff_text = r"$$%.0f \text{K}$$"%(teff)
+		target_mag_text = r"$$%.2f~$$"%(tessmag)
+		target_teff_text = r"$$%.0f~\text{K}$$"%(teff)
 		target_radius_text = r"$$%.2f~\text{R}_{\odot}$$"%(srad)
 		target_exofop_text = "{}".format(exofop_link)
 		target_simbad_text = "{}".format(simbad_text)
@@ -1251,11 +1321,59 @@ def select_data(lucky = False):
 		estimated_planet_rad2 = " "
 
 
-		target_targetinfo_data.text = """ <br> <br> {} <br> {} <br> {} <br> {} <br> {} <br> {} <br> {} <br> {} """.format(target_tic_text, target_ra_text, target_dec_text, target_mag_text, target_teff_text, target_radius_text, target_exofop_text, target_simbad_text)
+		target_targetinfo_data.text = """ <br> <br> {} <br> {} <br> {} <br> {} <br> {} <br> {} <br> <br> {} <br> {} """.format(target_tic_text, target_ra_text, target_dec_text, target_mag_text, target_teff_text, target_radius_text, target_exofop_text, target_simbad_text)
+
+
+		target_targetinfo_name_text  = " <!DOCTYPE html> \
+		<html> \
+		<style> \
+		.tooltip { \
+		  position: relative; \
+		  display: inline-block; \
+		  border-bottom: 1px dotted black; \
+		} \
+		 \
+		.tooltip .tooltiptext { \
+		  visibility: hidden; \
+		  width: 300px; \
+		  background-color: #293040; \
+		  color: #fff; \
+		  text-align: center; \
+		  font-size: 14px; /* Set a font-size */ \
+		  border-radius: 6px; \
+		  padding: 5px 0; \
+		   \
+		  /* Position the tooltip */ \
+		  position: absolute; \
+		  z-index: 1; \
+		  top: 100%; \
+		  left: 50%; \
+		  margin-left: -60px; \
+		} \
+		 \
+		.tooltip:hover .tooltiptext { \
+		  visibility: visible; \
+		} \
+		</style> \
+		<body style='text-align:center;'>  "
+		 
+		text_end = " <b> Target Information <b> <b> <br> \
+		<div class='tooltip'> <br> <b> TIC ID <b> <br> \
+		  <span class='tooltiptext'>{}</span> \
+		</div> \
+		<br> <b> RA <br> Dec <br> TESS mag <br> Teff <br> Stellar Radius <br> <br> ExoFOP <br> SIMBAD <b>\
+		 \
+		</body> \
+		</html> \
+		".format(names_str)
+
+		target_targetinfo_name.text = target_targetinfo_name_text + text_end
 
 	# bundle up the data to pass on
 	all_data = [alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, datapath, lc_paths,in_sec, TICID, ra, dec, phased_time]
-	
+		
+	# take note that the data has finished being dowloaded 
+	div_spinner_loading_data.visible = False
 
 	return all_data
 
@@ -1265,28 +1383,98 @@ def select_data(lucky = False):
 # run a spinner when the report is being made - to show the user that something is happening (progress bar for the future?)
 # the spinner has been coded in java scipt and was added to bokeh using CustomJS
 
-spinner_text = """
-<!-- https://www.w3schools.com/howto/howto_css_loader.asp -->
-<div class="loader">
-<style scoped>
-.loader {
-	border: 16px solid #f3f3f3; /* Light grey */
-	border-top: 16px solid orange; /* orange */
-	border-radius: 50%;
-	width: 100px;
-	height: 100px;
-	animation: spin 5s linear infinite;
+#spinner_text = """
+#<!-- https://www.w3schools.com/howto/howto_css_loader.asp -->
+#<div class="loader">
+#<style scoped>
+#.loader {
+#	border: 16px solid #f3f3f3; /* Light grey */
+#	border-top: 16px solid orange; /* orange */
+#	border-radius: 50%;
+#	width: 100px;
+#	height: 100px;
+#	animation: spin 5s linear infinite;
+#}
+#
+#@keyframes spin {
+#	0% { transform: rotate(0deg); }
+#	100% { transform: rotate(360deg); }
+#} 
+#</style>
+#</div>
+#"""
+
+spinner_text_report = """
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=0">
+<style>
+.buttonload {
+  background-color: grey; /* grey background */
+  border: none; /* Remove borders */
+  border-radius: 20px; 
+  color: white; /* White text */
+  padding: 0px 20px; /* Some padding */
+  font-size: 14px; /* Set a font-size */
+  text-align: center;
 }
 
-@keyframes spin {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
-} 
+/* Add a right margin to each icon */
+.fa {
+  margin-left: 0px;
+  margin-right: 0px;
+}
 </style>
-</div>
+</head>
+<body>
+
+<button class="buttonload">
+  <i class="fa fa-spinner fa-spin"></i>generating report...
+</button>
+
+</body>
+</html>
 """
 
-div_spinner = Div(text=spinner_text,width=120,height=120,visible=False, align = 'center')
+
+spinner_text_loading = """
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=0">
+<style>
+.buttonload {
+  background-color: grey; /* grey background */
+  border: none; /* Remove borders */
+  border-radius: 20px; 
+  color: white; /* White text */
+  padding: 0px 20px; /* Some padding */
+  font-size: 14px; /* Set a font-size */
+  text-align: center;
+}
+
+/* Add a right margin to each icon */
+.fa {
+  margin-left: 0px;
+  margin-right: 0px;
+}
+</style>
+</head>
+<body>
+
+<button class="buttonload">
+  <i class="fa fa-spinner fa-spin"></i>loading data...
+</button>
+
+</body>
+</html>
+"""
+
+div_spinner = Div(text=spinner_text_report,width=width_gadgets,height=40,visible=False, align = 'center')
+div_spinner_loading_data = Div(text=spinner_text_loading,width=width_gadgets,height=40,visible=False, align = 'center')
 
 
 #download_text = """
@@ -1298,6 +1486,12 @@ cb = CustomJS(args=dict(div_spinner=div_spinner)
 				,code='''
 				console.log('cb triggered!')
 				div_spinner.change.emit()''')
+
+
+cb_data = CustomJS(args=dict(div_spinner=div_spinner_loading_data)
+				,code='''
+				console.log('cb_data triggered!')
+				div_spinner_loading_data.change.emit()''')
 
 
 # the title of the image is not needed but the code doesn't work without it so I'm goign to move on with my life and leave it there before I go insane trygin to figure out why
@@ -1334,10 +1528,40 @@ fetch(path, {cache: "no-store"}).then(response => response.blob())
 						}
 						return response.text();
 					});
-
 """
 
 
+#JScode_fetch = """
+#var filename = p.title.text.split(' ')[1];
+#filename = filename.concat('_data.txt');
+#alert(filename);
+#
+#
+#fetch('/applatte/static/online_output_latte/470710327_rn6268116/470710327_data.txt', {cache: "no-store"}).then(response => response.blob())
+#                    .then(blob => {
+#                        alert(filename);
+#                        //addresses IE
+#                        if (navigator.msSaveBlob) {
+#                            navigator.msSaveBlob(blob, filename);
+#                        }
+#
+#                        else {
+#                            var link = document.createElement("a");
+#                            link = document.createElement('a')
+#                            link.href = URL.createObjectURL(blob);
+#                            window.open(link.href, '_blank');
+#
+#                            link.download = filename
+#                            link.target = "_blank";
+#                            link.style.visibility = 'hidden';
+#                            link.dispatchEvent(new MouseEvent('click'))
+#                            URL.revokeObjectURL(url);
+#                        }
+#                        return response.text();
+#                    });
+#
+#
+#"""
 # - - - - - - - - - - - - - 
 
 # add the capability that if the size of a 'dummy' point is changed the report is downloaded 
@@ -1353,7 +1577,6 @@ def make_report(all_data):
 	'''
 
 	# only trigger the report making if at least one transit time has been added to the list (the button shouldn't be 'pressable' if this is not the case)
-
 
 	if len(transit_time_list) > 0 :
 
@@ -1373,7 +1596,8 @@ def make_report(all_data):
 					save = True
 					north = False
 					mpi = False
-			
+					axis_split = True
+
 				args=Args()
 			
 				simple = False	# we don't want to run the simple version - that's option is simply to do quick test
@@ -1383,11 +1607,25 @@ def make_report(all_data):
 				args.auto = True # the code will automatically choose it's own apertures in this mode
 				BLS = False
 				model = False # modelling currently isn't availanbe - should we change that? 
-				
-	
+
+				if plotting_options_menu.value == "split axes by hemispheres":
+					args.axis_split = 200
+				elif plotting_options_menu.value == "split axes by sectors":
+					args.axis_split = 15
+				elif plotting_options_menu.value == "plot sectors with events":
+					args.axis_split = 0
+				else:
+					args.axis_split = -999
+
+				#if plotting_options_menu.value == "split":
+
+				#	args.axis_split = True
+				#else:
+				#	args.axis_split = False
+
 				alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, datapath, lc_paths,sectors, tic, ra, dec, phased_time = all_data
 				#	0		1			2			 3		 4			5				6		7		8	 9		 10			11		 12		 13		14		15		 16	17	 18		19		20	 21	22
-	
+				
 				# run brew to make hte report
 				global random_number
 				#generate a random number that will be used to keep track of what the file is called (for storing)
@@ -1395,15 +1633,16 @@ def make_report(all_data):
 				random_number = random.randint(1000000, 9999999) # 7 digit random number
 				
 				#print ("the random number is {}".format(random_number))
-
 				LATTEbrew.brew_LATTE(tic, random_number, db, lc_paths, datapath, outpath, syspath, transit_time_list, simple, BLS, model, save, DV, sectors, sectors, alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, np.nanmax(allflux), np.nanmin(allflux), tessmag, teff, srad, ra, dec, [-111], [-111], [-111], args)
 				
 				rn_text.text = str(random_number)
 				# once the report has been made, remove the spinner again! 
+
+				# then delete everything in the folder that isn't the pdf file 
+				# be VERY careful when editing this line of code
+				os.system('rm {}/{}_rn{}/{}_*.png'.format(outpath, tic, random_number,tic)) # THIS REMOVES GENERATED PNG FILES
 				div_spinner.visible=False
 
-
-		
 		doc.add_next_tick_callback(brew)
 
 		def change_size():
@@ -1917,7 +2156,7 @@ button_phase_fit = Button(label = "Fit transit", button_type = 'primary', height
 menu_phase_fit = Select(title="Signal type", value="Transit",
 				 options=["Transit", "Short transit", "Long transit", 'Eclipse', 'Deep eclipse'], height = 31, width = 160)
 
-# help button to primpt the user to add a TIC ID
+# help button to prompt the user to add a TIC ID
 fit_question_button = Button(label="?", width = 5)
 fit_question_text = CustomJS(args={}, code='alert("Once you have phase folded the data, you can generate a very BASIC model for the fit. Note that the transits/eclipses have to be at a phase of 0, and that the model is NOT a full transit model and only an initial guess. If the model is sucessfull, it will provide an estimate of the planet radius. Note that this is only an approximation!");')
 fit_question_button.js_on_click(fit_question_text)
@@ -1981,7 +2220,7 @@ tabs = Tabs(tabs=panels)
 # to align in the middle align = "center"
 settings_txt = Div(text="""Settings - - - - - - - - - - - - - - - - - -""", width=width_gadgets, height=20, align = 'start', style={'font-size': '130%', 'color': 'darkorange'})
 
-transit_times_txt = Div(text="""Select transit times - - - - - - - - - - - -""", width=width_gadgets, height=20, align = 'start', style={'font-size': '130%', 'color': 'darkorange'})
+transit_times_txt = Div(text="""Select event times - - - - - - - - - - - -""", width=width_gadgets, height=20, align = 'start', style={'font-size': '130%', 'color': 'darkorange'})
 
 
 #target_info_name = column(target_targetinfo_name,target_text_sep_name, target_tic_name,target_ra_name, target_dec_name,target_mag_name,target_teff_name,target_radius_name,target_exofop_name,target_simbad_name, tr_text_name)
@@ -1991,19 +2230,16 @@ transit_times_txt = Div(text="""Select transit times - - - - - - - - - - - -""",
 space = Spacer(width = 15, height = 0)
 h_space = Spacer(width = 0, height = 20)
 
-target_info_name = column(h_space, target_targetinfo_name)
-target_info_text = column(h_space, target_targetinfo_data)
-
+target_info_name = column(h_space, target_targetinfo_name, Spacer(width = 0, height = 120), tr_text_name)
+target_info_text = column(h_space, target_targetinfo_data, Spacer(width = 0, height = 120), tr_text)
 
 #quick_zoom_toggle -- removed quick zoom toggle for now (can always add back in)
 
 
-l = column(row(column(latte_logo, target_name_input, div_error, row(button, tic_prompt_button), button_lucky, div_spinner, settings_txt, bin_factor, slider, select_sector, row(back_button, next_button), transit_times_txt, add_time_button, del_time_button, row(button_done, report_prompt_button), rn_text, color_theme_menu, pht_latte_logo, row(pht_text, phcc_text)), column(p,tabs, twitter_logo, joss_text), space, target_info_name, target_info_text), sizing_mode="scale_both")
+l = column(row(column(latte_logo, target_name_input, div_error, row(button, tic_prompt_button), button_lucky, div_spinner, div_spinner_loading_data, settings_txt, bin_factor, slider, select_sector, row(back_button, next_button), transit_times_txt, add_time_button, del_time_button, row(button_done, report_prompt_button), rn_text, color_theme_menu, plotting_options_menu, pht_latte_logo, row(pht_text, phcc_text)), column(p,tabs, twitter_logo, joss_text), space, target_info_name, target_info_text), sizing_mode="scale_both")
 
 #select_data()	# initial load of the data
 curdoc().add_root(l)
-
-
 
 
 

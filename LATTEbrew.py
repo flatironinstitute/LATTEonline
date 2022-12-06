@@ -177,7 +177,12 @@ def brew_LATTE(tic, random_number, db, lc_paths, indir, outpath, syspath, transi
 	if len(transit_list) != 0: # this is always the case unless the asteroseismic only option ws chosen
 		# create a plot of the fulllighcurves with the momentum dumps (MDs) marked and a zoom-in of the marked transits
 		# this plit is saved but not shown (as already shown in the interact part fo the code)
-		utils.plot_full_md(tic, random_number, outpath, alltime, allflux, all_md,alltimebinned, allfluxbinned, transit_list, upper_axis_lim_final, lower_axis_lim_final, args)
+		
+		#if args.axis_split == False:
+		#	utils.plot_full_md(tic, random_number, outpath, alltime, allflux, all_md,alltimebinned, allfluxbinned, transit_list, upper_axis_lim_final, lower_axis_lim_final, args)
+		#else:
+		utils.plot_full_md_axisbreaks(tic, random_number, outpath, alltime, allflux, all_md,alltimebinned, allfluxbinned, transit_list, upper_axis_lim_final, lower_axis_lim_final, np.array(start_sec), np.array(end_sec),args)
+
 
 		# Get a list of the sectors that have transit marked in them
 		# this is so that we no longer have to loop through all of the sectors, and can focus on the ones which are important.
@@ -412,7 +417,6 @@ def brew_LATTE(tic, random_number, db, lc_paths, indir, outpath, syspath, transi
 		tessmag = catalogData['Tmag'][0]
 		teff = catalogData['Teff'][0]
 		srad = catalogData['rad'][0]
-		c_id = c_id
 
 	# ------------
 	# period analysis
