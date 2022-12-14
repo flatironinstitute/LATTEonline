@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    {{ bokeh_css }}
+    {{ bokeh_js }}
+    <script type="text/javascript">
+      function parseHash() {
+        //console.log("The hash is:" + location.hash.substr(1));
+        //console.log((document.getElementsByName('IDInput').length))             
+        if(location.hash.length != 0) {
+          document.getElementsByName('IDInput')[0].value = location.hash.substr(1).substr(3);
+          //document.getElementsByName("button_all_sectors").click();
+          var event = new Event('change');
+          document.getElementsByName('IDInput')[0].dispatchEvent(event);
+        }
+      }
+
+      function loading() {
+        //console.log("This is happening if we load!");
+        checkFlag();
+      }
+
+      function checkFlag() {
+          //console.log((document.getElementsByName('IDInput').length))
+
+          if((document.getElementsByName('IDInput').length) == 0) {
+             window.setTimeout(checkFlag, 100); /* this checks the flag every 100 milliseconds*/
+             //console.log(document.getElementsByName('IDInput').length) //object
+             //console.log("nope")
+          } else {
+            //console.log(document.getElementsByName('IDInput')[0].value)
+            //console.log("yep")
+            parseHash();
+          }
+      }
+
+      function hashchanged() {
+        //console.log("The hash has changed!");
+        parseHash();
+      }
+
+
+    </script>
+  </head>
+  <body onLoad="loading();" onHashChange="hashchanged();">
+  {{ plot_div|indent(8) }}
+  {{ plot_script|indent(8) }}
+  </body>
+</html>
