@@ -108,7 +108,6 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 		canvas.drawString(width*0.85, height * 0.95, header)
 		canvas.drawRightString(200*mm, 10*mm, text)
 
-
 	#------------------------------------------------------------------
 	# Recall the names of all the plots that will be in the DV report
 	#------------------------------------------------------------------
@@ -130,7 +129,7 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 	#SDSS_stars_name = '{}/{}_rn{}/{}_SDSSstar_field.png'.format(indir, tic, tic)
 
 	nearest_neighbour_name = '{}/{}_rn{}/{}_nearest_neighbours.png'.format(outpath, tic, random_number,tic)
-
+	
 	#pixel_LCs_name = '{}/{}_rn{}/{}_individual_pixel_LCs_0.png'.format(indir, tic,tic)
 
 	bls1 = '{}/{}_rn{}/{}_bls_first.png'.format(outpath, tic, random_number,tic)
@@ -545,7 +544,6 @@ def LATTE_DV(tic, random_number, indir, outpath, syspath, transit_list, sectors_
 
 			ptext = '<font size=8>%s</font>' % flux_aperture_text
 			Story.append(Paragraph(ptext, styles["Normal"]))
-
 
 			# --------------------------------------------
 			# tess stars + SDSS star field

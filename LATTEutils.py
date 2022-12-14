@@ -639,7 +639,7 @@ def download_data_FFI_interact(indir,sector, sectors_all, tic, save = False):
     mom_df = pd.read_csv(momentum_dumps_list, comment = '#', delimiter = '\t')
 
     for sec in sector:
-        print (sec)
+        #print (sec)
         # import the data
         #print ("Importing FFI data sector {} ...".format(sec))
 
@@ -3171,6 +3171,7 @@ def plot_TESS_stars(tic,random_number, indir, transit_sec, tpf_list, args):
     except:
         #print ("Currently cannot connect to Astroquery.")
         # return values that we know aren't real so that we can tell the code that the plotting didn't work
+        
         return -999, -999, -999, 1, -999,-999,-999,-999
 
     # ra and dec of the target star
@@ -3892,9 +3893,16 @@ def plot_full_md_axisbreaks(tic, random_number,indir, time_dd, flux_dd, all_md, 
             
         xlims_end_chunk.append(np.nanmax(time_dd) + 5)
         
+        #print (xlims_start_chunk)
+        #print (xlims_end_chunk)
+
+
         baxes_xlims = tuple(zip(xlims_start_chunk, xlims_end_chunk))
+        #print (baxes_xlims)
+
         main_bax = brokenaxes(xlims=baxes_xlims, hspace = 0.0000001, subplot_spec=grid[0, :])
 
+    # plot sectors with events only !! 
     elif args.axis_split == 0:
         # only plot the sectors where there is a transit
 
@@ -3908,12 +3916,15 @@ def plot_full_md_axisbreaks(tic, random_number,indir, time_dd, flux_dd, all_md, 
             start_bound.append(float(start_sec[start_mask]))
             end_bound.append(float(end_sec[start_mask]))
         
-        baxes_xlims = tuple(zip(set(start_bound), set(end_bound)))
+        start_bound_ = sorted(list(set(start_bound)), key=float)
+        end_bound_ = sorted(list(set(end_bound)), key=float)
 
+
+        baxes_xlims = tuple(zip(start_bound_, end_bound_))
         main_bax = brokenaxes(xlims=baxes_xlims, hspace = 0.0000001, subplot_spec=grid[0, :])
 
     else:
-        # no axis limits 
+        # no axis limits
         main_bax = brokenaxes(hspace = 0.0000001, subplot_spec=grid[0, :])
 
     line_dd = all_md
@@ -3930,11 +3941,9 @@ def plot_full_md_axisbreaks(tic, random_number,indir, time_dd, flux_dd, all_md, 
         minf_list.append(minf0)
         maxf_list.append(maxf0)
     
-    
     minf = lower_axis_lim_final
     maxf = upper_axis_lim_final
     height = maxf - minf
-    
     
     # plot the top panel (full LC) first
     # create the broken axes and plot the binne dna unbinned data 

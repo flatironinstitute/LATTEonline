@@ -12,6 +12,7 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import configparser
+
 import seaborn as sb
 matplotlib.use('Agg')
 #import sqlite3 as sql
@@ -31,6 +32,7 @@ from scipy.optimize import curve_fit
 from astroquery.mast import Catalogs
 
 # bokeh tools - - - - - - - - - - -
+from jinja2 import Template
 from bokeh.io import curdoc
 from bokeh.resources import CDN
 from bokeh.embed import file_html
@@ -38,7 +40,7 @@ from bokeh.embed import file_html
 from bokeh.models.widgets import Select
 from bokeh.themes import built_in_themes
 from bokeh.plotting import figure, curdoc
-from bokeh.events import DoubleTap, ButtonClick
+from bokeh.events import DoubleTap, ButtonClick, DocumentReady
 from bokeh.layouts import column, row, layout, Spacer
 from bokeh.models import TextInput, DataTable, Dropdown, DateFormatter, TableColumn, Paragraph, Button, Slider, CustomJS, Range1d, Select, Toggle, ColumnDataSource, Panel, Tabs, Span, Div, Select, Slider, Div
 
@@ -48,14 +50,16 @@ import LATTEutils, LATTEbrew
 global target_name_input
 global datapath
 global syspath
-
+global TIC_url
+global button_loaded
+global twitter_logo_text1
 
 # scp -r /Users/neisner/Documents/code/LATTEonline ccalin029:/mnt/home/neisner/projects/
 # scp -r /mnt/home/neisner/projects/LATTEonline popeye:/mnt/home/neisner/projects/
-
 # scp -r /Users/neisner/Documents/code/LATTEonline popeye:/mnt/home/neisner/projects/
-
+# scp -r /Users/neisner/Documents/code/LATTEonline/app/*.py popeye:/mnt/home/neisner/projects/LATTEonline/app/
 # open the confidguration file so that this can be used on different machines as long as there is a cofnigureation file pointing to the LATTE output folder
+#rsync -r /Users/neisner/Documents/code/LATTEonline/ popeye:/mnt/home/neisner/projects/LATTEonline
 
 syspath = str(os.path.abspath(LATTEutils.__file__))[0:-14]
 
@@ -95,56 +99,8 @@ else:
 	"""
 
 
-twitter_logo_text = """<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<style>
-.fa {
-	padding: 5px;
-	font-size: 30px;
-	width: 30px;
-	text-align: center;
-	text-decoration: none;
-	margin: 2px 2px;
-	border-radius: 80%;
-}
 
-.fa:hover {
-		opacity: 0.7;
-}
-
-.fa-twitter {
-	background: #55ACEE;
-	color: white;
-}
-
-.fa-facebook {
-	background: #3B5998;
-	color: white;
-}
-
-
-.fa-linkedin {
-	background: #007bb5;
-	color: white;
-}
-
-</style>
-</head>
-<body>
-
-<!-- Add font awesome icons -->
-<a href="#" class="fa fa-twitter"></a>
-<a href="#" class="fa fa-facebook"></a>
-<a href="#" class="fa fa-linkedin"></a>
-
-</body>
-</html> 
-
-"""
-
+#https://css-tricks.com/simple-social-sharing-links/
 
 # - - - - - - - - - - - - needed functions - - - - - - - - - - - - 
 def rebin(arr, new_shape):
@@ -159,41 +115,37 @@ def rebin(arr, new_shape):
 	)
 	return arr.reshape(shape).mean(-1).mean(1)
 
-
 # - - - - - - - - - - 
-
+# - - - - - - - - - -
 # START the document
 
 doc = curdoc()
 
-#curdoc().theme = 'dark_minimal'
 
-# make it look pretty !!
+with open('./templates/index.html') as f:
+    index_template = Template(f.read())
+    doc.template = index_template
+
+
+# ------- LOGOS -------
+# ---------------------
+
 
 # add the LATTE logo
 latte_logo = Div(text=logo_text)
 
-#tooltips = [
-#			('Player', '3443'),
-#			('Three-Pointers Made', '3424'),
-#			('Three-Pointers Attempted', '3424'),
-#			('Three-Point Percentage', '25243')	 
-#			 ]
-
-#latte_logo.add_tools(HoverTool(tooltips=tooltips))
 
 # add the PHT and PHCC logos 
 pht_latte_logo = Div(text=PHT_logo_text)
-
-twitter_logo = Div(text=twitter_logo_text)
-
 
 # ------------------------------------------------------------------------------
 # - - - - - - - - - - -	LOAD SQL TABLE FOR DATA ACCESS- - - - - - - - - - - - - 
 # ------------------------------------------------------------------------------
 
+
 DB_FILE = datapath + '/tess_database.db'
 
+# database to get the data
 class Database:
 	def __init__(self, db_file):
 		self.connection = None
@@ -279,52 +231,12 @@ class Database:
 
 		return (sector, lc_filename_list, tp_filename_list)
 
-
 # load the database - this is a quick way to search for all of the needed urls
 db = Database(DB_FILE)
 
-# ------------------------------------------------------------------------------
-# - - - - - - - - - - -	MAKE BUTTONS + DROP DOWN MENUS- - - - - - - - - - - - - 
-# ------------------------------------------------------------------------------
-
-width_gadgets = 250
-
-# enter the TIC ID button 
-button = Button(label = "Enter", button_type = 'primary', width = width_gadgets - 42)
-
-#I'm feeling lucky button 
-#button = Button(label = "I'm feeling lucky", button_type = 'primary', width = width_gadgets - 42)
-button_lucky = Button(label = "I'm feeling lucky", button_type = 'warning', width = width_gadgets)
-
-
-target_name_input = TextInput(title='Enter Simbad or TIC ID of a star:', width=width_gadgets)
-
-# help button to primpt the user to add a TIC ID
-tic_prompt_button = Button(label="?", width = 5)
-tic_prompt_text = CustomJS(args={}, code='alert("(1) Enter a TIC ID or any ID recognised by SIMBAD. If the target was observed by TESS the data will be shown. (If you\'re feelig lucky, click the orange button below to select a random target!) (2) Double click on the figure to select an event time. (3) Press the Add time button to add the time to the list of event times to analyse. (4) Press the Make report button to generate a pdf summary.");')
-tic_prompt_button.js_on_click(tic_prompt_text)
-
-# button to enter
-button_done = Button(label = "Make Report", button_type = 'primary', width=width_gadgets - 42)
-
-report_prompt_button = Button(label="?", width = 5)
-report_prompt_text = CustomJS(args={}, code='alert("Select transit times by clicking on the Add time button. Added times appear to the right of the light curve plots. Once at least one event time has beeen added a pdf report can be generated. Reports are automatically downloaded.");')
-report_prompt_button.js_on_click(report_prompt_text)
-
-# button to change the bin factor
-bin_factor = Select(title="Bin factor", value="10",
-				 options=["2", "5", '10', '20'], width=width_gadgets)
-
-# make a drop bown menu to select which sector to look at 
-select_sector = Select(title="Select sector", value="all", options=["all"], width=width_gadgets)
-
-# the text to add/remove transit events
-tr_text_name = Div(text="""<b>Event times<b> \n""", width=120, height=100, style={'font-size': '120%', 'color': 'black'})
-tr_text = Div(text=""" """, width=100, height=100, style={'font-size': '120%', 'color': 'black'})
-rn_text = Div(text=""" - """, width=1, height=1, style={'font-size': '0%', 'color': '0'}) # this is dummy text for the naming of the planets
-
 # add text for the information of the target! Empty at the begingin but as you load data this will update
 
+# parameters used throughout 
 width1 = 150
 width2 = 300
 
@@ -332,6 +244,7 @@ color1 = 'dimgray'
 color2 = '#293040'
 fontsize = '110%'
 text_height = 15
+width_gadgets = 250
 
 
 target_targetinfo_name_text  = " <!DOCTYPE html> \
@@ -377,61 +290,6 @@ text_end = " <b> Target Information <b> <b> <br> \
 </html> \
 ".format("other names")
 
-#target_targetinfo_name = Div(text= """<b>Target Information <b> <br> <br>TIC ID <br> RA <br> Dec <br> TESS mag <br> Teff <br> Stellar Radius <br> <br> ExoFOP <br> SIMBAD""", width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
-target_targetinfo_name = Div(text= target_targetinfo_name_text + text_end, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
-
-target_targetinfo_data = Div(text= """ """, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
-
-#target_tic_name = Div(text=""" TIC ID """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_ra_name = Div(text=""" RA	""", width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_dec_name = Div(text=""" Dec """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_mag_name = Div(text=""" TESS Mag """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_teff_name = Div(text=""" Teff """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_radius_name = Div(text=""" Stellar Radius """, width=width1, height=50, style={'font-size': fontsize, 'color': color1})
-#target_exofop_name = Div(text=""" ExoFOP """, width=width1, height=text_height, style={'font-size': fontsize, 'color': color1})
-#target_simbad_name = Div(text=""" SIMBAD """, width=width1, height=60, style={'font-size': fontsize, 'color': color1})
-#
-#target_targetinfo_text = Div(text=""" """, width=width1, height=10, style={'font-size': fontsize, 'color': 'black'})
-#target_tic_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_ra_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_dec_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_mag_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_teff_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_radius_text = Div(text=""" """, width=width2, height=50, style={'font-size': fontsize, 'color': color2})
-#target_exofop_text = Div(text=""" """, width=width2, height=text_height, style={'font-size': fontsize, 'color': color2})
-#target_simbad_text = Div(text=""" """, width=width2, height=60, style={'font-size': fontsize, 'color': color2})
-
-estimated_planet_rad = Div(text=""" """, width=150, height=15, style={'font-size': fontsize, 'color': color2})
-estimated_planet_rad2 = Div(text=""" """, width=150, height=15, style={'font-size': fontsize, 'color': color2})
-
-# make a div for the text undenear the image
-# logo links (PHT and PHCC)
-# make a div for the text undenear the image
-# logo links (PHT and PHCC)
-pht_url = "https://www.zooniverse.org/projects/nora-dot-eisner/planet-hunters-tess"
-phcc_url = "https://www.planethunters.coffee"
-pht_link = '<a href="%s"target="_blank">Coffee Chat</a>' % (phcc_url)
-phcc_link = '<a href="%s"target="_blank">Planet Hunters TESS</a>'% (pht_url)
-
-pht_text = Div(text=pht_link,	width=125, height=20, style={'font-size': '90%', 'color': 'grey'})
-phcc_text = Div(text=phcc_link, width=125, height=20, style={'font-size': '90%', 'color': 'grey'})
-
-target_text_sep_name = Div(text="""<b>- - - - - - - - - - - - - - -<b>""", width=width1, height=30, style={'font-size': fontsize, 'color': 'darkorange'})
-target_text_sep = Div(text=""" """, width=width1, height=30, style={'font-size': fontsize, 'color': 'darkorange'})
-
-# buttons to add and delete time
-add_time_button = Button(label = "Add time" ,width=width_gadgets)
-del_time_button = Button(label = "Delete time", width=width_gadgets)
-
-# button to move forward and backwards 
-next_button = Button(label = "Next", width=120)
-back_button = Button(label = "Back", width=120)
-
-#quick_zoom_toggle = Toggle(label = "zoom", button_type = 'warning', width=100)
-
-joss_url = 'https://joss.theoj.org/papers/10.21105/joss.02101'
-reference_text = "Copyright: Nora Eisner. If you use this tool for work that is being published please cite <a href='%s'target='_blank'>Eisner et al. 2020</a>." % joss_url
-joss_text = Div(text=reference_text, style={'font-size': '75%', 'color': 'grey'})
 
 # ------------------------------------------------------------------------------------
 # - - - - - - - - - - -	DEFINE THE DATA AND PLOTTING REGION - - - - - - - - - - - - - 
@@ -441,7 +299,9 @@ source = ColumnDataSource(data=dict(x=[], y=[])) # unbinned data
 source_binned = ColumnDataSource(data=dict(x_binned=[], y_binned=[])) # binned data
 source_md = ColumnDataSource(data=dict(md_x1 = [], md_y1 =[], md_x2 = [], md_y2 =[])) # momentun dumps
 source_dummy = ColumnDataSource(data=dict(x_dummy=[1e2], y_dummy=[1e-10])) # dummy data
-
+# - - - - - - - 
+# check whether the URL has any information in it that we care about
+# - - - - - - -
 
 # - - - - make the figures - - - - -
 
@@ -477,34 +337,29 @@ main_segment = p.segment(x0 = "md_x1",
 	y0 = "md_y1",
 	x1 = "md_x2",
 	y1 = "md_y2",
+	level = 'underlay',
 	source = source_md,
 	color="blue", 
 	line_width=1)
 
-
 p.xaxis.axis_label = r"$$\text{Time (BJD - 2457000)}$$"
 p.yaxis.axis_label = r"$$\text{Normalised Flux}$$"
-
 
 # when LATTE is first launched, we want to prompt the user to enter a TIC ID on the left 
 # to do that we will put some text on the empty plot 
 
-welcome_text_source = ColumnDataSource(
-			pd.DataFrame.from_records([dict(
-			x=100,
-			y=50,
-			text="Enter a TIC ID to start.",
-			color="black")]))
-
-
-welcome_text = p.text(
-		x="x",
-		y="y",
-		text="text",
-		text_align="center",
-		text_font_size="20px",
-		#text_font="helvetica",
-		source= welcome_text_source)
+#welcome_text_source = ColumnDataSource(
+#			pd.DataFrame.from_records([dict(
+#			x=[100],
+#			y=[50],
+#			text="1. Enter a TIC ID to start. \n 2. Double click on figure to select events.",
+#			color="black")]))
+#
+#welcome_text = p.text(
+#		text="text",
+#		text_align="center",
+#		text_font_size="15px",
+#		source= welcome_text_source)
 
 # - - - - -	ZOOM TAB - - - - - - 
 
@@ -539,18 +394,18 @@ zoom_points_binned = plot_zoom.circle(x="x_zoom_binned",
 	line_color=None, 
 	alpha=0.5)
 
-zoom_segment = plot_zoom.segment(x0 = "md_x1", 
-	y0 = "md_y1",
-	x1 = "md_x2",
-	y1 = "md_y2",
-	source = source_md,
-	color="blue", 
-	line_width=1)
+#zoom_segment = plot_zoom.segment(x0 = "md_x1", 
+#	y0 = "md_y1",
+#	x1 = "md_x2",
+#	y1 = "md_y2",
+#	source = source_md,
+#	level = 'underlay',
+#	color="blue", 
+#	line_width=1)
 
 # add x and y labels
 plot_zoom.xaxis.axis_label = r"$$\text{Time (BJD - 2457000)}$$"
 plot_zoom.yaxis.axis_label = r"$$\text{Normalised Flux}$$"
-
 
 # - - - - -	BACKGROUND TAB - - - - - - 
 
@@ -566,7 +421,6 @@ plot_bkg = figure(
 	toolbar_location="below", 
 	tools='box_zoom,wheel_zoom,pan,reset'
 )
-
 
 bkg_points = plot_bkg.circle(
 	x="x_bkg",
@@ -590,7 +444,6 @@ source_xcen2 = ColumnDataSource(data=dict(x_xcen2=[], y_xcen2=[]))
 source_ycen1 = ColumnDataSource(data=dict(x_ycen1=[], y_ycen1=[]))
 source_ycen2 = ColumnDataSource(data=dict(x_ycen2=[], y_ycen2=[]))
 
-
 plot_xcen = figure( 
 	plot_height=150,
 	min_width=600,
@@ -613,7 +466,6 @@ plot_ycen = figure(
 	tools='box_zoom,wheel_zoom,pan,reset'
 )
 
-
 xcen1_points = plot_xcen.circle(
 	x="x_xcen1",
 	y="y_xcen1",
@@ -633,7 +485,6 @@ xcen2_points = plot_xcen.circle(
 	alpha=0.3,
 	size=5,
 )
-
 
 ycen1_points = plot_ycen.circle(
 	x="x_ycen1",
@@ -661,7 +512,6 @@ plot_ycen.xaxis.axis_label = r"$$\text{Time (BJD - 2457000)}$$"
 plot_ycen.yaxis.axis_label = r"$$\text{y-centroid}$$"
 
 
-
 # - - - - - PERIODOGRAM TAB - - - - - - 
 
 source_periodgrm = ColumnDataSource(
@@ -685,7 +535,6 @@ plot_periodgrm = figure(
 	tools='box_zoom,wheel_zoom,pan,reset'
 )
 
-
 pg_points = plot_periodgrm.line(
 	x="x_periodgrm",
 	y="y_periodgrm",
@@ -694,7 +543,6 @@ pg_points = plot_periodgrm.line(
 	color="black",
 	alpha=1,
 )
-
 
 dummy_points = plot_periodgrm.circle(x="x_dummy", 
 	y="y_dummy", 
@@ -705,22 +553,6 @@ dummy_points = plot_periodgrm.circle(x="x_dummy",
 	alpha=0,
 	)
 
-
-
-# add the smoothes line to the periodogram (not needed most of the time so delete for now)
-#plot_periodgrm.line(
-#	x="x_periodgrm_smooth",
-#	y="y_periodgrm_smooth",
-#	source=source_periodgrm_smooth,
-#	line_color="red",
-#	color="red",
-#	alpha=1,
-#)
-
-
-# add x and y labels
-plot_periodgrm.xaxis.axis_label = r"$$\text{Frequency}~(\mu Hz)$$"
-plot_periodgrm.yaxis.axis_label = (r"$$\text{Power Density}~(A{^2} \mu Hz^{-1})$$")
 
 
 # - - - -	EVOLUTIONARY TRACKS TAB - - - - 
@@ -784,7 +616,6 @@ for i in range(300,1700, 100): # we have evolutionary tracks from 0.3 M_sun to 1
 		data=dict(x_evol_pMS=list(phase2_T[mask2]), y_evol_pMS=list(phase2_R[mask2]))
 	)
 
-
 	# plot the 1 Solar Mass track in a different colour to make it stand out - easier for reference.
 	if i == 1000:
 		color_MS = 'red'
@@ -792,7 +623,6 @@ for i in range(300,1700, 100): # we have evolutionary tracks from 0.3 M_sun to 1
 	else:
 		color_MS = 'black'
 		color_pMS = 'grey'
-
 
 	evol_targets_MS = plot_evol.line(
 		x="x_evol_MS",
@@ -813,7 +643,6 @@ for i in range(300,1700, 100): # we have evolutionary tracks from 0.3 M_sun to 1
 		alpha=1,
 	)
 
-
 evol_points = plot_evol.circle(x="x_evol_points", 
 	y="y_evol_points", 
 	source=source_evol_points, 
@@ -822,8 +651,6 @@ evol_points = plot_evol.circle(x="x_evol_points",
 	line_color=None, 
 	alpha=0.3,
 	)
-
-
 
 evol_targets = plot_evol.scatter(x="x_evol_target", 
 	y="y_evol_target", 
@@ -843,12 +670,11 @@ plot_evol.x_range.end = 3000
 plot_evol.y_range.start = 0.2
 plot_evol.y_range.end = 4
 
-
 plot_evol.xaxis.axis_label = r"$$\text{T}_{\text{eff}} (K)$$"
 plot_evol.yaxis.axis_label = r"$$\text{Radius (R}_{\odot})$$"
 
-
 div_error = Div(text=""" this is not a TESS target """, visible=False, width=150, height=15, align = 'start', style={'font-size': '90%', 'color': 'red'})
+div_error_astroquery = Div(text=""" can't connect to astroquery """, visible=False, width=150, height=15, align = 'start', style={'font-size': '80%', 'color': 'red'})
 
 
 # - - - -	PHASE FOLD TAB - - - - 
@@ -857,7 +683,6 @@ source_phased = ColumnDataSource(data=dict(x_phase=[], y_phase=[]))
 source_phased_fit = ColumnDataSource(data=dict(x_phase_fit=[], y_phase_fit=[]))
 
 #source_phased_binned = ColumnDataSource(data=dict(x_phase_binned=[], y_phase_binned=[]))
-
 
 
 plot_phase = figure(
@@ -879,7 +704,6 @@ phase_points = plot_phase.circle(x="x_phase",
 	alpha=0.8,
 	)
 
-
 phase_fit = plot_phase.line(x="x_phase_fit", 
 	y="y_phase_fit", 
 	source=source_phased_fit, 
@@ -888,7 +712,6 @@ phase_fit = plot_phase.line(x="x_phase_fit",
 	alpha=1,
 	line_width = 3
 	)
-
 
 plot_phase.xaxis.axis_label = r"\text{Phase (days)}"
 plot_phase.yaxis.axis_label = r"\text{Flux}"
@@ -901,7 +724,7 @@ plot_phase.yaxis.axis_label = r"\text{Flux}"
 #	color="black", 
 #	line_color=None, 
 #	alpha=0.5)
-#
+
 
 # - - - - - - - - - - - - - - - - 
 
@@ -913,8 +736,8 @@ color_theme_menu = Select(title="Color theme", value="light",
 				 options=['light', 'dark'], width=width_gadgets)
 
 
-plotting_options_menu = Select(title="Report plot options", value="split by hemispheres",
-				 options=["split axes by hemispheres", "split axes by sectors", "don't split axes", "plot sectors with events"], width=width_gadgets)
+plotting_options_menu = Select(title="Report plot options", value="split axis by hemispheres",
+				 options=["split axis by hemispheres", "split axis by sectors", "don't split axis", "plot sectors with events"], width=width_gadgets)
 
 
 def color_theme():
@@ -933,7 +756,7 @@ def color_theme():
 
 		zoom_points.glyph.fill_color = 'darkorange' 
 		zoom_points_binned.glyph.fill_color = 'black'
-		zoom_segment.glyph.line_color = 'blue'
+		#zoom_segment.glyph.line_color = 'blue'
 
 		bkg_points.glyph.fill_color = 'blue'
 
@@ -968,7 +791,7 @@ def color_theme():
 
 		zoom_points.glyph.fill_color = 'dimgray' 
 		zoom_points_binned.glyph.fill_color = 'white'
-		zoom_segment.glyph.line_color = 'paleturquoise'
+		#zoom_segment.glyph.line_color = 'paleturquoise'
 
 		bkg_points.glyph.fill_color = 'paleturquoise'
 
@@ -995,14 +818,14 @@ color_theme_menu.on_change('value', lambda attr, old, new: color_theme())
 # - - - - - - FUNCTIONS - - - - - - -
 # -----------------------------------
 
-def select_data(lucky = False):
-
+def select_data(lucky = False, single = True, url = False):
+	
 	'''
 	Function to load the data needed to plot the initial LCs displayed in the interface.
 	'''
-
 	# take note that the data is being dowloaded 
-	div_spinner_loading_data.visible = True
+
+	#print ("start select data")
 
 	global transit_time_list
 
@@ -1011,69 +834,135 @@ def select_data(lucky = False):
 	tr_text.text = "{}".format(str(np.around(transit_time_list,2))[1:-1])
 
 	# -----------------
-	
-
-	# grey out the DV report button if no	(i.e. )
+	# grey out the DV report button if no events
 	if len(transit_time_list) > 0:
 		button_done.disabled=False
 	else:
 		button_done.disabled=True
 
+
+	if (url == False):
+		input_name = str(target_name_input.value)
+	else:
+		input_name = str(dummy_name_input.value)
+
+	# if lucky is false then see what the tic is (otherwise there is no tic so don't do this)
 	if lucky == False:
 		try:
-			target_name = str(target_name_input.value)
-			#TIC = 'TIC {}'.format(TICID)
-			
-			catalog_data = Catalogs.query_object(target_name, catalog="TIC", radius = 0.001)
-			
-			TICID	= str(catalog_data[0]['ID'])
-			TIC = "TIC " + str(TICID) # numerical only
-			
-			_ , lc_paths0, tp_paths0 = db.search(int(TICID))
-			
-			df_other_names = (pd.DataFrame(np.array(catalog_data)))
-			
-			other_names_ref = ['HIP','TYC','UCAC','TWOMASS','SDSS','ALLWISE','GAIA','APASS','KIC']
-			
-			names_str = ''
-			
-			for name in other_names_ref:
-			    
-			    if len(df_other_names[name][0]) > 0:
-			        names_str = names_str +  (str(name) + ' ' + str(df_other_names[name][0]) + "<br>")
-			    else:
-			        names_str = names_str + (str(name) + ' ' + "--- <br>")
-
-
+			int(input_name)
+			tic_num_only = True
 		except:
-			#if it fails then the target can't be resolved 
-			try:
-				TICID = int(target_name)
-				TIC = "TIC " + str(TICID) # numerical only
-				_ , lc_paths0, tp_paths0 = db.search(int(TICID))
-
-				names_str = 'unavailable'
-
-			except:
-				#p.title.text_color="red"
-				#p.title.text = "THIS TARGET HASN'T BEEN OSBERVED BY TESS"
+			if len(input_name) > 0:
+				tic_num_only = False
+			else:
 				all_data = [-99]
-				div_error.visible=True
 				div_spinner_loading_data.visible = False
 				return all_data
 
-	else:
+		if tic_num_only == False:
+			#input_name = str(target_name_input.value)
+	
+			try: # try with simbad 
+				#TIC = 'TIC {}'.format(TICID)
+				
+				#print ("start query")
+				catalog_data = Catalogs.query_object(input_name, catalog="TIC", radius = 0.001)
+				
+				TICID	= str(catalog_data[0]['ID'])
+				TIC = "TIC " + str(TICID) # numerical only
+				
+				#print ("start db")
+	
+				_ , lc_paths0, tp_paths0 = db.search(int(TICID))
+	
+				#print ("end db")
+	
+				if single == True:
+					lc_paths0 = [lc_paths0[-1]]
+					tp_paths0 = [tp_paths0[-1]]
+	
+				df_other_names = (pd.DataFrame(np.array(catalog_data)))
+				
+				other_names_ref = ['HIP','TYC','UCAC','TWOMASS','SDSS','ALLWISE','GAIA','APASS','KIC']
+				
+				names_str = ''
+				
+				for name in other_names_ref:
+					
+					if len(df_other_names[name][0]) > 0:
+						names_str = names_str +  (str(name) + ' ' + str(df_other_names[name][0]) + "<br>")
+					else:
+						names_str = names_str + (str(name) + ' ' + "--- <br>")
+	
+			except: # if the TIC thing didn't work either, then check whether SIMBAD is currently working
+				try:
+					catalog_data = Catalogs.query_object('55525572', catalog="TIC", radius = 0.001)
+					all_data = [-99]
+					div_error_astroquery.visible=True
+					div_spinner_loading_data.visible = False
+					return all_data
+				except:
+					#p.title.text_color="red"
+					#p.title.text = "THIS TARGET HASN'T BEEN OSBERVED BY TESS"
+					all_data = [-99]
+					div_error.visible=True
+					div_spinner_loading_data.visible = False
+					return all_data
+	
+		elif tic_num_only == True:
+	
+			#if it fails with SIMABD then the target can't be resolved so check whether its just the TIC UD
+			try:
+	
+				#print ("start query - tic only")
+	
+				TIC = "TIC " + str(input_name) # numerical only
+				_ , lc_paths0, tp_paths0 = db.search(int(input_name))
+				
+				if single == True:
+					lc_paths0 = [lc_paths0[-1]]
+					tp_paths0 = [tp_paths0[-1]]
+				
+				names_str = 'unavailable'
+				#print ("end db")
+	
+			except: # if the TIC thing didn't work either, then check whether SIMBAD is currently working
+				try:
+					catalog_data = Catalogs.query_object('55525572', catalog="TIC", radius = 0.001)
+					all_data = [-99]
+					div_error_astroquery.visible=True
+					div_spinner_loading_data.visible = False
+					return all_data
+				except:
+					#p.title.text_color="red"
+					#p.title.text = "THIS TARGET HASN'T BEEN OSBERVED BY TESS"
+					all_data = [-99]
+					div_error.visible=True
+					div_spinner_loading_data.visible = False
+					return all_data
+
+		else:
+			all_data = [-99]
+			div_error_astroquery.visible=True
+			div_spinner_loading_data.visible = False
+	
+			return all_data
+
+	else: # if lucky is true
+
 		_ , lc_paths0, tp_paths0 = db.search_random()
+
 		names_str = 'unavailable'
+	
 
 	div_error.visible = False
-
+	div_error_astroquery.visible = False
 	lc_paths0 = lc_paths0
 	tp_paths0 = tp_paths0
 
-
 	# if no new data - delete old data and print that this is not a valid TIC ID
-	if len(lc_paths0) == 0:
+	
+	if lc_paths0 == 0:
 
 		source.data = dict(
 			x=[0],
@@ -1086,10 +975,10 @@ def select_data(lucky = False):
 			)
 
 		source_md.data = dict(
-			x=[0],
-			y=[0], 
-			xm01 = [0],
-			ym01 = [0]
+			md_x1=[0],
+			md_y1=[0],
+			md_x2=[0],
+			md_y2=[0]
 			)
 
 		source_zoom.data = dict(
@@ -1102,11 +991,31 @@ def select_data(lucky = False):
 			y_zoom_binned=[0]
 			)
 
-
 		# give some indication that this is not a valid TIC ID
 		#p.title.text_color="red"
 		#p.title.text = "THIS TARGET HASN'T BEEN OSBERVED BY TESS"
 		all_data = [-99]
+
+		global twitter_logo_text1
+		twitter_logo_text2 = "</style> \
+		<script> \
+		 \
+		</script> \
+		</head> \
+		<body> \
+		 \
+		<!-- Add font awesome icons --> \
+		<a href='https://twitter.com/intent/tweet?url=http://latte-online.flatironinstitute.org&text=Looking+at+TESS+light+curves+using+LATTE%21&hashtags=TESS,NASA,LATTE' target=_blank' class='fa fa-twitter'></a>\
+		<a href='https://www.facebook.com/sharer.php?u=http://latte-online.flatironinstitute.org' target=_blank' class='fa fa-facebook'></a> \
+		</body> \
+		</html> \
+		"
+		
+		#		<a href='https://www.linkedin.com/shareArticle?url=http://latte-online.flatironinstitute.org&title=LATTE&summary=Looking+at+TESS+light+curves+using+LATTE%21&source=LATTE' target=_blank' class='fa fa-linkedin'></a> \
+
+		twitter_logo_text = twitter_logo_text1 + twitter_logo_text2
+
+		twitter_logo.text = twitter_logo_text
 
 		return all_data
 
@@ -1116,23 +1025,12 @@ def select_data(lucky = False):
 		
 		#print("download data")
 		# extract the data from the fits files
-		alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, ra, dec, TICID = LATTEutils.download_data(lc_paths)
+
+		alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, ra, dec, TICID = LATTEutils.download_data(lc_paths,binfac = 10)
 
 		#print("end download data")
 		# change things into arrays because they're better
-		
-		#allx1 = np.array(allx1)
-		#allx2 = np.array(allx2)
-		#ally1 = np.array(ally1)
-		#ally2 = np.array(ally2)
-		#allfbkg = np.array(allfbkg)
-		#alltime = np.array(alltime)
-		#allflux = np.array(allflux)
-		#alltime12 = np.array(alltime12)
-		#allflux_err = np.array(allflux_err)
-		#alltimebinned = np.array(alltimebinned)
-		#allfluxbinned = np.array(allfluxbinned)
-		
+
 		# we can't handle nans so get rid of those
 		finite_mask = np.isfinite(alltime) & np.isfinite(allflux) & np.isfinite(allflux_err)
 		finite_binned = np.isfinite(alltimebinned) & np.isfinite(allfluxbinned) 
@@ -1153,6 +1051,7 @@ def select_data(lucky = False):
 		# add a sensical title to the plot about the parameters of the target we're looking at
 		p.title.text_color="black"
 		p.title.text = "TIC %s" %(TICID)
+		
 		#p.title.text = "%s		mag = %.2f		Teff = %.0f		Rstar = %.2f" %(TIC, tessmag, teff, srad)
 
 		minf = np.nanmin(allflux)
@@ -1164,10 +1063,9 @@ def select_data(lucky = False):
 		md_y2 = [minf + height*0.3]
 
 		# -	 -	 -	 -	 -	 -
-
 		# change/update the plotting data	text (i.e. delete the text)
-		welcome_text_source.data = pd.DataFrame.from_records([dict(text="")])
-
+		
+		# welcome_text_source.data = pd.DataFrame.from_records([dict(text="", x = )])
 
 		# -	 -	 -	 -	 -	 - UPDATE PLOT DATA -	 -	 -	 -	 -	 -
 		
@@ -1181,7 +1079,6 @@ def select_data(lucky = False):
 			x_binned=alltimebinned[finite_binned],
 			y_binned=allfluxbinned[finite_binned]
 			)
-
 
 		# update the plotting region axis limits and reset the 'sector selector'
 		# start each not target by showing the whole data set and not an indiciual sector
@@ -1199,7 +1096,6 @@ def select_data(lucky = False):
 		transit_mask = (alltime > (start_line - 1)) & (alltime < (start_line + 1))
 		transit_mask_binned = (alltimebinned > (start_line - 1)) & (alltimebinned < (start_line + 1))
 		alltime12_mask = (alltime12 > (start_line - 1)) & (alltime12 < (start_line + 1))
-
 
 		# change the y axis limits if the centroid and backrgound plots - otherwise they're a bit crazy
 
@@ -1220,10 +1116,10 @@ def select_data(lucky = False):
 
 		# momentum dumps -	 -	 -	 -	 -	 -
 		source_md.data = dict(
-			x=all_md,
-			y=[md_y1]*len(all_md), 
-			xm01 = all_md,
-			ym01 = [md_y2]*len(all_md)
+			md_x1=all_md,
+			md_y1=[md_y1]*len(all_md), 
+			md_x2 = all_md,
+			md_y2 = [md_y2]*len(all_md)
 			)
 
 		# background data	-	 -	 -	 -	 -	 -
@@ -1256,7 +1152,7 @@ def select_data(lucky = False):
 		ls = lc.to_periodogram(normalization="psd")
 		
 		best_period = (1/ls.frequency_at_max_power).to('d').value
-		t0 = 0 
+		t0 = 0
 
 		phased_time = np.array([-0.5+( ( t - t0-0.5*best_period) % best_period) / best_period for t in alltime]) * best_period
 
@@ -1264,7 +1160,6 @@ def select_data(lucky = False):
 		
 		freq = ls.frequency
 		power = ls.power
-
 
 		# perioddogram -	 -	 -	 -	 -	 -
 		source_periodgrm.data = dict(
@@ -1289,7 +1184,6 @@ def select_data(lucky = False):
 			y_phase=allflux
 			)
 
-
 		source_phased_fit.data = dict(x_phase_fit=[], y_phase_fit=[])
 
 		plot_zoom.x_range.start = start_line - 1
@@ -1300,7 +1194,6 @@ def select_data(lucky = False):
 		tr_text.text = "{}".format(str(np.around(list(),2))[1:-1])
 
 		# print the information about the target to the right of the target (instead of in the plot title?)
-
 
 		exofop_url = "https://exofop.ipac.caltech.edu/tess/target.php?id={}".format(TICID)
 		exofop_link = '<a href="%s"target="_blank">ExoFOP</a>' % (exofop_url)
@@ -1369,6 +1262,28 @@ def select_data(lucky = False):
 
 		target_targetinfo_name.text = target_targetinfo_name_text + text_end
 
+		
+		twitter_logo_text2 = "</style> \
+		<script> \
+		 \
+		</script> \
+		</head> \
+		<body> \
+		 \
+		<!-- Add font awesome icons --> \
+		<a href='https://twitter.com/intent/tweet?url=http://latte-online.flatironinstitute.org%23ID%3D{}&text=Looking+at+the+light+curve+of+TIC+{}+using+LATTE%21&hashtags=TESS,NASA,LATTE' target=_blank' class='fa fa-twitter'></a>\
+		<a href='https://www.facebook.com/sharer.php?u=http://latte-online.flatironinstitute.org%23ID%3D{}' target=_blank' class='fa fa-facebook'></a> \
+		</body> \
+		</html> \
+		".format(p.title.text.split(' ')[1], p.title.text.split(' ')[1], p.title.text.split(' ')[1])
+		
+		#<a href='https://www.linkedin.com/shareArticle?url=http://latte-online.flatironinstitute.org%23ID%3D{}&title=LATTE&summary=Looking+at+the+light+curves+of+TIC+{}+using+LATTE%21&source=LATTE' target=_blank' class='fa fa-linkedin'></a> \
+
+		twitter_logo_text = twitter_logo_text1 + twitter_logo_text2
+
+		twitter_logo.text = twitter_logo_text
+
+
 	# bundle up the data to pass on
 	all_data = [alltime, allflux, allflux_err, all_md, alltimebinned, allfluxbinned, allx1, allx2, ally1, ally2, alltime12, allfbkg, start_sec, end_sec, in_sec, tessmag, teff, srad, datapath, lc_paths,in_sec, TICID, ra, dec, phased_time]
 		
@@ -1383,26 +1298,6 @@ def select_data(lucky = False):
 # run a spinner when the report is being made - to show the user that something is happening (progress bar for the future?)
 # the spinner has been coded in java scipt and was added to bokeh using CustomJS
 
-#spinner_text = """
-#<!-- https://www.w3schools.com/howto/howto_css_loader.asp -->
-#<div class="loader">
-#<style scoped>
-#.loader {
-#	border: 16px solid #f3f3f3; /* Light grey */
-#	border-top: 16px solid orange; /* orange */
-#	border-radius: 50%;
-#	width: 100px;
-#	height: 100px;
-#	animation: spin 5s linear infinite;
-#}
-#
-#@keyframes spin {
-#	0% { transform: rotate(0deg); }
-#	100% { transform: rotate(360deg); }
-#} 
-#</style>
-#</div>
-#"""
 
 spinner_text_report = """
 <!DOCTYPE html>
@@ -1437,7 +1332,6 @@ spinner_text_report = """
 </body>
 </html>
 """
-
 
 spinner_text_loading = """
 <!DOCTYPE html>
@@ -1476,11 +1370,9 @@ spinner_text_loading = """
 div_spinner = Div(text=spinner_text_report,width=width_gadgets,height=40,visible=False, align = 'center')
 div_spinner_loading_data = Div(text=spinner_text_loading,width=width_gadgets,height=40,visible=False, align = 'center')
 
-
 #download_text = """
 #<a href="bokeh_latte/static/LATTE_logo_small.png" download="w3logo">
 #"""
-
 
 cb = CustomJS(args=dict(div_spinner=div_spinner)
 				,code='''
@@ -1492,7 +1384,6 @@ cb_data = CustomJS(args=dict(div_spinner=div_spinner_loading_data)
 				,code='''
 				console.log('cb_data triggered!')
 				div_spinner_loading_data.change.emit()''')
-
 
 # the title of the image is not needed but the code doesn't work without it so I'm goign to move on with my life and leave it there before I go insane trygin to figure out why
 # important - the temperoary file needs to be stored in the static folder!
@@ -1524,50 +1415,21 @@ fetch(path, {cache: "no-store"}).then(response => response.blob())
 							link.target = "_blank";
 							link.style.visibility = 'hidden';
 							link.dispatchEvent(new MouseEvent('click'))
-							URL.revokeObjectURL(url);
 						}
 						return response.text();
 					});
 """
 
-
-#JScode_fetch = """
-#var filename = p.title.text.split(' ')[1];
-#filename = filename.concat('_data.txt');
-#alert(filename);
-#
-#
-#fetch('/applatte/static/online_output_latte/470710327_rn6268116/470710327_data.txt', {cache: "no-store"}).then(response => response.blob())
-#                    .then(blob => {
-#                        alert(filename);
-#                        //addresses IE
-#                        if (navigator.msSaveBlob) {
-#                            navigator.msSaveBlob(blob, filename);
-#                        }
-#
-#                        else {
-#                            var link = document.createElement("a");
-#                            link = document.createElement('a')
-#                            link.href = URL.createObjectURL(blob);
-#                            window.open(link.href, '_blank');
-#
-#                            link.download = filename
-#                            link.target = "_blank";
-#                            link.style.visibility = 'hidden';
-#                            link.dispatchEvent(new MouseEvent('click'))
-#                            URL.revokeObjectURL(url);
-#                        }
-#                        return response.text();
-#                    });
-#
-#
-#"""
 # - - - - - - - - - - - - - 
 
 # add the capability that if the size of a 'dummy' point is changed the report is downloaded 
 # crucial step to download the report
 #dummy_points.glyph.js_on_change('size', CustomJS(args=dict(p=p),code=JScode_fetch))
 
+
+# ---------------------------------------
+# ---------- CALLBACK FUNCTIONS ---------
+# ---------------------------------------
 
 #filename = filename.concat(target_name_input); filename = filename.concat('.pdf');
 def make_report(all_data):
@@ -1608,9 +1470,10 @@ def make_report(all_data):
 				BLS = False
 				model = False # modelling currently isn't availanbe - should we change that? 
 
-				if plotting_options_menu.value == "split axes by hemispheres":
-					args.axis_split = 200
-				elif plotting_options_menu.value == "split axes by sectors":
+
+				if plotting_options_menu.value == "split axis by hemispheres":
+					args.axis_split = 150
+				elif plotting_options_menu.value == "split axis by sectors":
 					args.axis_split = 15
 				elif plotting_options_menu.value == "plot sectors with events":
 					args.axis_split = 0
@@ -1653,7 +1516,7 @@ def make_report(all_data):
 		doc.add_next_tick_callback(change_size)
 
 	else:
-		print ("need at least one transit in the list")
+		pass
 
 
 # when the figure data needs to be re-loaded
@@ -1695,16 +1558,53 @@ def update_data(lc_collection):
 	p.x_range.start = np.nanmin(lc_collection[12])
 	p.x_range.end = np.nanmax(lc_collection[13])
 
-	
-
 
 # button to change the TIC ID (data)
+
+button_loaded = False
+# main enter button to load multiple sectors
 def button_callback():
 	'''
 	button to change the sectors that are available. 
 	'''
+	
+	#print ("start_button")
 	global source_data
-	source_data = select_data()
+	global button_loaded 
+
+	button_loaded = True
+	#print ("start spinner")
+
+	div_spinner_loading_data.visible = True
+	#print ("start data")
+
+	source_data = select_data(single = False)
+	
+	#print ("end data")
+
+	if len(source_data) != 1: # this means that the TIC ID was valid
+
+		sectors = source_data[14]
+	
+		strings = ["{} - Sector {}".format(i, str(x)) for i,x in enumerate(sectors)]
+	
+		select_sector.options = ["all"] + list(strings)
+
+# main enter button to load one sector
+def button_callback_single():
+	'''
+	button to change the sectors that are available. 
+	'''
+	#print ("single")
+
+	global button_loaded 
+	global source_data
+
+
+	button_loaded = True
+	div_spinner_loading_data.visible = True
+
+	source_data = select_data(single = True)
 	
 	if len(source_data) != 1: # this means that the TIC ID was valid
 
@@ -1714,13 +1614,38 @@ def button_callback():
 	
 		select_sector.options = ["all"] + list(strings)
 
+# callback to read the url
+def url_callback():
 
 
+	if (button_loaded == False):
+		div_spinner_loading_data.visible = True
+	
+		global source_data
+		source_data = select_data(single = False, url = True)
+		
+		if len(source_data) != 1: # this means that the TIC ID was valid
+	
+			sectors = source_data[14]
+		
+			strings = ["{} - Sector {}".format(i, str(x)) for i,x in enumerate(sectors)]
+		
+			select_sector.options = ["all"] + list(strings)
+
+	else:
+		#print ("nope")
+		button_loaded == False
+
+# choose a random tic id to plot
 def button_lucky_callback():
 	'''
 	button to change the sectors that are available. 
 	'''
+	global button_loaded # don't ask why this needs to b repeated but the code won't work without this 
 	global source_data
+	
+	button_loaded = True
+
 	source_data = select_data(lucky = True)
 	
 	if len(source_data) != 1: # this means that the TIC ID was valid
@@ -1731,11 +1656,9 @@ def button_lucky_callback():
 	
 		select_sector.options = ["all"] + list(strings)
 
-
-
 global current_transit_time
 
-
+# draw the line and move the zoom in window
 def line_callback(event, source_data):
 	
 	'''
@@ -1762,7 +1685,6 @@ def line_callback(event, source_data):
 	bkg_clipped = allfbkg[sig_clipping]
 	time_clipped = alltime[sig_clipping]
 
-
 	alltime12 = source_data[10]
 	allx1 = source_data[6]
 	allx2 = source_data[7]
@@ -1772,7 +1694,6 @@ def line_callback(event, source_data):
 	transit_mask = (alltime > (current_transit_time - 1)) & (alltime < (current_transit_time + 1))
 	transit_mask_binned = (alltimebinned > (current_transit_time - 1)) & (alltimebinned < (current_transit_time + 1))
 	alltime12_mask = (alltime12 > (current_transit_time - 1)) & (alltime12 < (current_transit_time + 1))
-
 
 	# change the y axis limits if the centroid and backrgound plots - otherwise they're a bit crazy
 
@@ -1832,12 +1753,12 @@ def line_callback(event, source_data):
 	#	plot_bkg.y_range.end	 = np.nanmax(source_data[11][transit_time_mask])
 
 
-# - - - - - - - - - - 
 
 global transit_time_list
 
 transit_time_list = []
 
+# add delete the event times
 def callback_times(foo):
 	'''
 	Function to add/remove transit times from the printed list
@@ -1861,9 +1782,8 @@ def callback_times(foo):
 			button_done.disabled=False
 		else:
 			button_done.disabled=True
-	
 
-
+# move through the sectorcs
 def callback_sector_skip(foo):
 	'''
 	Function to click through the sectors (or choose to view them all)
@@ -1942,7 +1862,7 @@ def callback_sector_skip(foo):
 		
 				select_sector.value = "{} - Sector {}".format(index, str(sector))
 
-
+# what sectors are available
 def sector_function(source_data):
 	
 
@@ -1960,29 +1880,274 @@ def sector_function(source_data):
 		p.x_range.start = start_sec
 		p.x_range.end = end_sec
 
+# make the phase plot
+def update_phase_data(source_data):
+
+	# Get the current slider values
+
+
+	try: # if no values have been entered don't do anything
+		period = float(period_input.value)
+		t0 = float(t0_input.value)
+	
+		phased_time = np.array([-0.5+( ( t - t0-0.5*period) % period) / period for t in np.array(source_data[0])]) * period
+	
+		source_phased.data = dict(x_phase=phased_time, y_phase=source_data[1])
+		source_phased_fit.data = dict(x_phase_fit=[], y_phase_fit=[])
+		estimated_planet_rad.text = " "
+		estimated_planet_rad2.text = " "
+	except:
+		pass
+
+# function for fitting 
+def cosh_gauss_fit(x, *args):
+		
+		c0,c1,t0,d,gamma = args
+		
+		fit =c0 + c1 * ( 1 - pow( 1 - np.exp( 1 - np.cosh( (x-t0) / d ) ) ,gamma) ) 
+		return fit
+
+# update the transirt fit 
+def update_transit_fit(source_data):
+
+	# Get the current slider values
+	try: # if no values have been entered don't do anything
+
+		period = float(period_input.value)
+		t0 = float(t0_input.value)
+	
+		# initial guesses...
+		#c0 = 0 # offset in the y 
+		#c1 = -1 # depth
+		#t0 = 0
+		#d = 0.5 # transit duration at the bottom of the transit
+		#gamma = 0.7
+	
+		c0 = 0
+		t0 = 0
+	
+		#c0 = 0 # offset in the y 
+		#c1 = -1 # depth
+		#t0 = 0
+		#d = 0.5 # transit duration at the bottom of the transit
+		#gamma = 0.7
+	
+		if menu_phase_fit.value == "Transit":
+			p0 = [c0,-0.1,t0,0.3,3]
+			transit = True
+	
+		elif	menu_phase_fit.value == "Short transit":
+			p0 = [c0,-0.1,t0,0.1,2]
+			transit = True
+	
+		elif	menu_phase_fit.value == "Long transit":
+			p0 = [c0,-0.1,t0,0.5,3]
+			transit = True
+	
+		elif	menu_phase_fit.value == "Eclipse":
+			p0 = [c0,-0.1,t0,0.1,2]
+			transit = False
+	
+		elif	menu_phase_fit.value == "Deep eclipse":
+			p0 = [c0,-0.5,t0,0.5,2]
+			transit = False
+	
+		time = source_phased.data['x_phase']
+		flux = source_phased.data['y_phase']
+		
+		try:
+			coeff, cm = curve_fit(cosh_gauss_fit, time, flux, p0=p0)
+			coeff_error = np.sqrt(np.diag(cm))
+			
+			fine_time_axis = np.linspace(np.min(time),np.max(time),10000)
+			flux_fit = cosh_gauss_fit(fine_time_axis, *coeff)
+		
+			source_phased_fit.data = dict(x_phase_fit=fine_time_axis, y_phase_fit=flux_fit)
+		
+			# given the transit depth, calculate the radius of the object
+		
+			srad = source_data[17] * 109.076 # convert to earth radii
+	
+			if transit == True:
+		
+				pl_rad = np.sqrt(coeff[1]*-1) * srad
+		
+				estimated_planet_rad.text = "Estimated radius:"
+				estimated_planet_rad2.text = r"$$%.2f~\text{R}_{\odot}$$" % float(pl_rad)
+			
+			if transit == False:
+				#target_simbad_text.text = r"$$\text{Estimated radius of eclipser}: {} \text{R}\_{odot}$$".format(simbad_text)
+				estimated_planet_rad.text = " "
+				estimated_planet_rad2.text = " "
+	
+		except:
+			estimated_planet_rad.text = "Fit failed."
+			estimated_planet_rad2.text = " "
+
+	except: # if no values have been entered don't do anything
+		pass
 
 # make the PDF report downloadable
 
 
-# - - - - - - - - LINK BUTTONS TO FUNCTIODNS - - - - - - - - 
-
-# get the data for the given LC!
-button.on_click(button_callback)
-
-# get the data for a random LC - feeling lucky!
-button_lucky.on_click(button_lucky_callback)
+# ---------------------------------------
+# -------- END CALLBACK FUNCTIONS -------
+# ---------------------------------------
 
 
-# change the bin factor
-bin_factor.on_change('value', lambda attr, old, new: update_data(source_data))
 
-# add.remove times from list
-del_time_button.on_click(partial(callback_times, foo="del_time_button"))
+# ------------------------------------------------------------------------------
+# - - - - - - - - - - -	MAKE BUTTONS + DROP DOWN MENUS- - - - - - - - - - - - - 
+# ------------------------------------------------------------------------------
+
+
+target_targetinfo_name = Div(text= target_targetinfo_name_text + text_end, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
+target_targetinfo_data = Div(text= """ """, width=width1, height=120, style={'font-size': fontsize, 'color': 'black'})
+
+estimated_planet_rad  = Div(text=""" """, width=150, height=15, style={'font-size': fontsize, 'color': color2})
+estimated_planet_rad2 = Div(text=""" """, width=150, height=15, style={'font-size': fontsize, 'color': color2})
+
+# make a div for the text undenear the image
+# logo links (PHT and PHCC)
+pht_url = "https://www.zooniverse.org/projects/nora-dot-eisner/planet-hunters-tess"
+phcc_url = "https://www.planethunters.coffee"
+pht_link = '<a href="%s"target="_blank">Coffee Chat</a>' % (phcc_url)
+phcc_link = '<a href="%s"target="_blank">Planet Hunters TESS</a>'% (pht_url)
+
+pht_text  = Div(text=pht_link,	width=125, height=20, style={'font-size': '90%', 'color': 'grey'})
+phcc_text = Div(text=phcc_link, width=125, height=20, style={'font-size': '90%', 'color': 'grey'})
+
+target_text_sep_name = Div(text="""<b>- - - - - - - - - - - - - - -<b>""", width=width1, height=30, style={'font-size': fontsize, 'color': 'darkorange'})
+target_text_sep = Div(text=""" """, width=width1, height=30, style={'font-size': fontsize, 'color': 'darkorange'})
+
+# ----
+
+# buttons to add and delete time
+add_time_button = Button(label = "Add time" ,width=width_gadgets)
 add_time_button.on_click(partial(callback_times, foo="add_time_button"))
 
+del_time_button = Button(label = "Delete time", width=width_gadgets)
+del_time_button.on_click(partial(callback_times, foo="del_time_button"))
+
+# ----
+
+# button to move forward and backwards 
 # flip through the sector options
-back_button.on_click(partial(callback_sector_skip, foo="back_button"))
+next_button = Button(label = "Next", width=120)
 next_button.on_click(partial(callback_sector_skip, foo="next_button"))
+
+back_button = Button(label = "Back", width=120)
+back_button.on_click(partial(callback_sector_skip, foo="back_button"))
+
+
+# ----
+
+joss_url = 'https://joss.theoj.org/papers/10.21105/joss.02101'
+reference_text = "Copyright: Nora Eisner. If you use this tool for work that is being published please cite <a href='%s'target='_blank'>Eisner et al. 2020</a>." % joss_url
+joss_text = Div(text=reference_text, style={'font-size': '75%', 'color': 'grey'})
+
+# ----
+
+# enter the TIC ID button 
+button_single = Button(label = "Enter (latest sector only)", button_type = 'primary', width = width_gadgets - 42, name = 'SingleButton')
+button_single.on_click(button_callback_single)
+
+# ----
+
+target_name_input = TextInput(title='Enter Simbad or TIC ID of a star:', width=width_gadgets) #, id = 'IDInput', name = 'IDInput')
+#target_name_input.on_change('value', lambda attr, old, new: button_callback_single()) # if you press enter after entering an ID it will load one sector
+
+# ----
+
+button = Button(label = "All sectors (takes longer)", id = 'button_all_sectors', name = 'button_all_sectors', button_type = 'primary', width = width_gadgets)
+button.on_click(button_callback)
+
+# ----
+
+#I'm feeling lucky button 
+button_lucky = Button(label = "I'm feeling lucky", button_type = 'warning', width = width_gadgets)
+button_lucky.on_click(button_lucky_callback)
+
+# ----
+
+# help button to primpt the user to add a TIC ID
+tic_prompt_button = Button(label="?", width = 5)
+tic_prompt_text = CustomJS(args={}, code='alert("(1) Enter a TIC ID or any ID recognised by SIMBAD. If the target was observed by TESS the data will be shown. (If you\'re feelig lucky, click the orange button below to select a random target!) (2) Double click on the figure to select an event time. (3) Press the Add time button to add the time to the list of event times to analyse. (4) Press the Make report button to generate a pdf summary.");')
+tic_prompt_button.js_on_click(tic_prompt_text)
+
+# ----
+
+# final button to trigger report making
+button_done = Button(label = "Make Report", button_type = 'primary', width=width_gadgets - 42)
+button_done.on_event(ButtonClick, lambda event: make_report(source_data)) 
+
+# ----
+
+# help button 
+report_prompt_button = Button(label="?", width = 5)
+report_prompt_text = CustomJS(args={}, code='alert("Select transit times by clicking on the Add time button. Added times appear to the right of the light curve plots. Once at least one event time has beeen added a pdf report can be generated. Reports are automatically downloaded.");')
+report_prompt_button.js_on_click(report_prompt_text)
+
+# ----
+
+# button to change the bin factor
+bin_factor = Select(title="Bin factor", value="10",
+				 options=["2", "5", '10', '20'], width=width_gadgets)
+bin_factor.on_change('value', lambda attr, old, new: update_data(source_data))
+
+# ----
+
+# make a drop bown menu to select which sector to look at 
+select_sector = Select(title="Select sector", value="all", options=["all"], width=width_gadgets)
+select_sector.on_change('value', lambda attr, old, new: sector_function(source_data))
+
+# ----
+
+# the text to add/remove transit events
+tr_text_name = Div(text="""<b>Event times<b> \n""", width=120, height=100, style={'font-size': '120%', 'color': 'black'})
+tr_text = Div(text=""" """, width=100, height=100, style={'font-size': '120%', 'color': 'black'})
+rn_text = Div(text=""" - """, width=1, height=1, style={'font-size': '0%', 'color': '0'}) # this is dummy text for the naming of the planets
+
+# ----
+
+# DUMMY INPUT FILE FOR THE URL 
+# if the dummy changes - which changes when the url changes then reload the data
+dummy_name_input = TextInput(value = '0', id = 'IDInput', name = 'IDInput', visible = False)
+dummy_name_input.on_change('value', lambda attr, old, new: url_callback())
+
+# ----
+
+button_phase = Button(label = "Enter", button_type = 'primary', height = 31, width = 160)
+button_phase.on_event(ButtonClick, lambda event: update_phase_data(source_data))
+
+# ----
+
+button_phase_fit = Button(label = "Fit transit", button_type = 'primary', height = 31, width = 110)
+button_phase_fit.on_event(ButtonClick, lambda event: update_transit_fit(source_data))
+
+# ----
+
+# select what kind of fit - drop down menu
+menu_phase_fit = Select(title="Signal type", value="Transit",
+				 options=["Transit", "Short transit", "Long transit", 'Eclipse', 'Deep eclipse'], height = 31, width = 160)
+
+# ----
+
+# help button to prompt the user to add a TIC ID
+fit_question_button = Button(label="?", width = 5)
+fit_question_text = CustomJS(args={}, code='alert("Once you have phase folded the data, you can generate a very BASIC model for the fit. Note that the transits/eclipses have to be at a phase of 0, and that the model is NOT a full transit model and only an initial guess. If the model is sucessfull, it will provide an estimate of the planet radius. Note that this is only an approximation!");')
+fit_question_button.js_on_click(fit_question_text)
+
+# ----
+
+#dummy_input = TextInput(value = '0', height = 0, width = 0)
+
+t0_input = TextInput(title='T0', height = 35, width = 160)
+period_input = TextInput(title='Period', height = 35, width = 160)
+
+
+#target_name_input.on_change('value', lambda attr, old, new: url_callback())
+
 
 # draw on the red line to indicate the transit if the figrue is double clicked
 transit_time = Span(location=0, dimension='height', line_color='red', line_dash='dashed', line_width=3)
@@ -2029,6 +2194,7 @@ marker_size_ycen1= CustomJS(args=dict(renderer=ycen1_points), code="""
 marker_size_ycen2 = CustomJS(args=dict(renderer=ycen2_points), code="""
 	renderer.glyph.size = cb_obj.value;
 """)
+
 marker_size_phase = CustomJS(args=dict(renderer=phase_points), code="""
 	renderer.glyph.size = cb_obj.value;
 """)
@@ -2044,145 +2210,77 @@ slider.js_on_change('value', marker_size_ycen1)
 slider.js_on_change('value', marker_size_ycen2)
 slider.js_on_change('value', marker_size_phase)
 
-# phase fold slider
-#t0_slider = Slider(start=0, end=50, value=0, step=.01, title="t0")
-#period_slider = Slider(start=0, end=100, value=10, step=.01, title="period")
-
-'''
-def update_phase_data(source_data):
-
-	# Get the current slider values
-	period = float(period_input.value)
-	t0 = float(t0_input.value)
-
-	phased_time = [-0.5+( ( t - t0-0.5*period) % period) / period for t in np.array(source_data[0])]
-
-	source_phased.data = dict(x_phase=phased_time, y_phase=source_data[1])
-'''
-
-def update_phase_data(source_data):
-
-	# Get the current slider values
-	period = float(period_input.value)
-	t0 = float(t0_input.value)
-
-	phased_time = np.array([-0.5+( ( t - t0-0.5*period) % period) / period for t in np.array(source_data[0])]) * period
-
-	source_phased.data = dict(x_phase=phased_time, y_phase=source_data[1])
-	source_phased_fit.data = dict(x_phase_fit=[], y_phase_fit=[])
-	estimated_planet_rad.text = " "
-	estimated_planet_rad2.text = " "
-
-def cosh_gauss_fit(x, *args):
-		
-		c0,c1,t0,d,gamma = args
-		
-		fit =c0 + c1 * ( 1 - pow( 1 - np.exp( 1 - np.cosh( (x-t0) / d ) ) ,gamma) ) 
-		return fit
-
-
-def update_transit_fit(source_data):
-
-	# Get the current slider values
-	period = float(period_input.value)
-	t0 = float(t0_input.value)
-
-	# initial guesses...
-	#c0 = 0 # offset in the y 
-	#c1 = -1 # depth
-	#t0 = 0
-	#d = 0.5 # transit duration at the bottom of the transit
-	#gamma = 0.7
-
-	c0 = 0 
-	t0 = 0 
-
-	if menu_phase_fit.value == "Transit":
-		p0 = [c0,-0.03,t0,0.3,2]
-		transit = True
-
-	elif	menu_phase_fit.value == "Short transit":
-		p0 = [c0,-0.03,t0,0.1,2]
-		transit = True
-
-	elif	menu_phase_fit.value == "Long transit":
-		p0 = [c0,-0.03,t0,0.5,3]
-		transit = True
-
-	elif	menu_phase_fit.value == "Eclipse":
-		p0 = [c0,-0.1,t0,0.1,2]
-		transit = False
-
-	elif	menu_phase_fit.value == "Deep eclipse":
-		p0 = [c0,-0.5,t0,0.5,2]
-		transit = False
-
-	time = source_phased.data['x_phase']
-	flux = source_phased.data['y_phase']
-	
-	try:
-		coeff, cm = curve_fit(cosh_gauss_fit, time, flux, p0=p0)
-		coeff_error = np.sqrt(np.diag(cm))
-		
-		fine_time_axis = np.linspace(np.min(time),np.max(time),10000)
-		flux_fit = cosh_gauss_fit(fine_time_axis, *coeff)
-	
-		source_phased_fit.data = dict(x_phase_fit=fine_time_axis, y_phase_fit=flux_fit)
-	
-		# given the transit depth, calculate the radius of the object
-	
-		srad = source_data[17] * 109.076 # convert to earth radii
-
-		if transit == True:
-	
-			pl_rad = np.sqrt(coeff[1]*-1) * srad
-	
-			estimated_planet_rad.text = "Estimated radius:"
-			estimated_planet_rad2.text = r"$$%.2f~\text{R}_{\odot}$$" % float(pl_rad)
-		
-		if transit == False:
-			#target_simbad_text.text = r"$$\text{Estimated radius of eclipser}: {} \text{R}\_{odot}$$".format(simbad_text)
-			estimated_planet_rad.text = " "
-			estimated_planet_rad2.text = " "
-
-	except:
-		estimated_planet_rad.text = "Fit failed."
-		estimated_planet_rad2.text = " "
-
-button_phase = Button(label = "Enter", button_type = 'primary', height = 31, width = 160)
-button_phase_fit = Button(label = "Fit transit", button_type = 'primary', height = 31, width = 110)
-
-
-menu_phase_fit = Select(title="Signal type", value="Transit",
-				 options=["Transit", "Short transit", "Long transit", 'Eclipse', 'Deep eclipse'], height = 31, width = 160)
-
-# help button to prompt the user to add a TIC ID
-fit_question_button = Button(label="?", width = 5)
-fit_question_text = CustomJS(args={}, code='alert("Once you have phase folded the data, you can generate a very BASIC model for the fit. Note that the transits/eclipses have to be at a phase of 0, and that the model is NOT a full transit model and only an initial guess. If the model is sucessfull, it will provide an estimate of the planet radius. Note that this is only an approximation!");')
-fit_question_button.js_on_click(fit_question_text)
-
-
-t0_input = TextInput(title='T0', height = 35, width = 160)
-period_input = TextInput(title='Period', height = 35, width = 160)
-
-button_phase.on_event(ButtonClick, lambda event: update_phase_data(source_data))
-button_phase_fit.on_event(ButtonClick, lambda event: update_transit_fit(source_data))
-
-
-# slider to change the zoom window size 
-# slider_zoom_window = Slider(start=0.5, end=5, value=1, step=.1, title="Zoom window size")
-
-# change bin factor
-bin_factor.on_change('value', lambda attr, old, new: update_data(source_data))
-
-# change sector selection
-select_sector.on_change('value', lambda attr, old, new: sector_function(source_data))
-
-# final button to trigger report makign
-button_done.on_event(ButtonClick, lambda event: make_report(source_data)) 
-
 
 dummy_points.glyph.js_on_change('size', CustomJS(args=dict(p=p, rn_text=rn_text),code=JScode_fetch))
+
+#------ SOCIAL MEDIA ---------
+
+
+
+twitter_logo_text1 = """<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+.fa {
+	padding: 5px;
+	font-size: 30px;
+	width: 30px;
+	text-align: center;
+	text-decoration: none;
+	margin: 2px 2px;
+	border-radius: 80%;
+}
+.fa:hover {
+		opacity: 0.7;
+}
+
+.fa-twitter {
+	background: #55ACEE;
+	color: white;
+}
+
+.fa-facebook {
+	background: #3B5998;
+	color: white;
+}
+.fa-linkedin {
+	background: #007bb5;
+	color: white;
+}
+"""
+
+twitter_logo_text2 = "</style> \
+<script> \
+ \
+</script> \
+</head> \
+<body> \
+ \
+<!-- Add font awesome icons --> \
+<a href='https://twitter.com/intent/tweet?url=http://latte-online.flatironinstitute.org&text=Looking+at+TESS+light+curves+using+LATTE%21&hashtags=TESS,NASA,LATTE' target=_blank' class='fa fa-twitter'></a>\
+<a href='https://www.facebook.com/sharer.php?u=http://latte-online.flatironinstitute.org' target=_blank' class='fa fa-facebook'></a> \
+</body> \
+</html> \
+"
+
+#<a href='https://www.linkedin.com/shareArticle?url=http://latte-online.flatironinstitute.org&title=LATTE&summary=Looking+at+TESS+light+curves+using+LATTE%21&source=LATTE' target=_blank' class='fa fa-linkedin'></a> \
+
+twitter_logo_text = twitter_logo_text1 + twitter_logo_text2
+
+twitter_logo = Div(text=twitter_logo_text)
+
+
+
+#  -----------------  change the url  ----------------- 
+JScode_url = """
+var url_name = '#ID=' + p.title.text.split(' ')[1];
+window.location.hash = url_name;
+"""
+
+change_url = CustomJS(args=dict(p=p), code=JScode_url)
+p.title.js_on_change('text', change_url)
 
 
 # -----------------
@@ -2194,7 +2292,7 @@ if len(transit_time_list) > 0:
 else:
 	button_done.disabled=True
 
-# -----------------
+# ----------------- LAYOUT ----------------- 
 
 # make the 'other' plots used as diagnostics
 # these will be shown in panels that can easily be flicked through for quick diagnostics
@@ -2213,19 +2311,18 @@ spacer1 = Spacer(width = 0, height = 18)
 
 panels[5] = Panel(child=column(plot_phase, row(column(t0_input,spacer1,estimated_planet_rad), column(period_input, spacer1,estimated_planet_rad2), column(spacer1, button_phase), column(menu_phase_fit, spacer1, row(button_phase_fit, fit_question_button)))), title="Phase fold") # phase folde 
 
-
 tabs = Tabs(tabs=panels)
 
 #return column(plot, tabs, sizing_mode="stretch_width")
 # to align in the middle align = "center"
+instructions_txt = Div(text="""Double click on figure to select times.""", width=width_gadgets, height=10, align = 'start', style={'font-size': '90%', 'color': 'darkgrey'})
+
 settings_txt = Div(text="""Settings - - - - - - - - - - - - - - - - - -""", width=width_gadgets, height=20, align = 'start', style={'font-size': '130%', 'color': 'darkorange'})
 
 transit_times_txt = Div(text="""Select event times - - - - - - - - - - - -""", width=width_gadgets, height=20, align = 'start', style={'font-size': '130%', 'color': 'darkorange'})
 
-
 #target_info_name = column(target_targetinfo_name,target_text_sep_name, target_tic_name,target_ra_name, target_dec_name,target_mag_name,target_teff_name,target_radius_name,target_exofop_name,target_simbad_name, tr_text_name)
 #target_info_text = column(target_targetinfo_text,target_text_sep,target_tic_text,target_ra_text,target_dec_text, target_mag_text,target_teff_text,target_radius_text,target_exofop_text,target_simbad_text,tr_text)
-
 
 space = Spacer(width = 15, height = 0)
 h_space = Spacer(width = 0, height = 20)
@@ -2233,92 +2330,11 @@ h_space = Spacer(width = 0, height = 20)
 target_info_name = column(h_space, target_targetinfo_name, Spacer(width = 0, height = 120), tr_text_name)
 target_info_text = column(h_space, target_targetinfo_data, Spacer(width = 0, height = 120), tr_text)
 
-#quick_zoom_toggle -- removed quick zoom toggle for now (can always add back in)
 
-
-l = column(row(column(latte_logo, target_name_input, div_error, row(button, tic_prompt_button), button_lucky, div_spinner, div_spinner_loading_data, settings_txt, bin_factor, slider, select_sector, row(back_button, next_button), transit_times_txt, add_time_button, del_time_button, row(button_done, report_prompt_button), rn_text, color_theme_menu, plotting_options_menu, pht_latte_logo, row(pht_text, phcc_text)), column(p,tabs, twitter_logo, joss_text), space, target_info_name, target_info_text), sizing_mode="scale_both")
+l = column(row(column(latte_logo, dummy_name_input, target_name_input, div_error, div_error_astroquery, row(button_single, tic_prompt_button), button, button_lucky, instructions_txt, div_spinner, div_spinner_loading_data, settings_txt, bin_factor, slider, select_sector, row(back_button, next_button), transit_times_txt, add_time_button, del_time_button, row(button_done, report_prompt_button), rn_text, color_theme_menu, plotting_options_menu, pht_latte_logo, row(pht_text, phcc_text)), column(p,tabs, twitter_logo, joss_text), space, target_info_name, target_info_text), sizing_mode="scale_both")
 
 #select_data()	# initial load of the data
 curdoc().add_root(l)
 
 
-
-#html = file_html(l, CDN, "latte_html")
-#
-#with open('latte_html.txt', 'w') as f:
-#	f.write(html)
-#
-##
-#from bokeh.embed import server_document
-#script = server_document("https://demo.bokeh.org/sliders")
-#
-#with open('latte_html_script.txt', 'w') as f:
-#	f.write(script)
-#
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# -----------
-
-
-# NOT USED AT THE MOMENT BUT KEEP INCASE WE WANT IT BACK
-def quick_zoom(event):
-
-	'''CURRENTLY NOT USED'''
-
-	try:	
-		if quick_zoom_toggle.active == True:
-			
-			line_loc = transit_time.location
-			p.x_range.start = line_loc - 1
-			p.x_range.end =line_loc + 1
-		
-			#main_points.glyph.size = 5
-			#binned_points.glyph.size = 5
-
-		if quick_zoom_toggle.active == False:
-			
-
-			line_loc = transit_time.location
-			p.x_range.start = line_loc - 1
-			p.x_range.end =line_loc + 1
-	
-			if select_sector.value == 'all':
-	
-				select_sector.value = 'all'
-				p.x_range.start = np.nanmin(source_data[12])
-				p.x_range.end = np.nanmax(source_data[13])
-	
-	
-			else:
-				index = int(select_sector.value.split(" ")[0])
-	
-				start_sec = float(source_data[12][index][0])
-				end_sec = float(source_data[13][index][0])
-				sector = int(source_data[14][index])
-			
-				p.x_range.start = start_sec
-				p.x_range.end = end_sec
-			
-				select_sector.value = "{} - Sector {}".format(index, str(sector))
-			
-			#main_points.glyph.size = 3
-			#binned_points.glyph.size = 3
-
-	except:
-
-		print ("must select a point in the LC first")
 
