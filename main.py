@@ -121,7 +121,7 @@ def rebin(arr, new_shape):
 
 doc = curdoc()
 
-with open('./app/templates/index.html') as f:
+with open('templates/index.html') as f:
     index_template = Template(f.read())
     doc.template = index_template
 
